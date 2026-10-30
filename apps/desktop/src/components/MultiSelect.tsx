@@ -12,6 +12,7 @@ export function MultiSelect({
   placeholder,
   searchable = true,
   maxLabel = 1,
+  single = false,
 }: {
   options: FilterOption[];
   selected: number[];
@@ -19,6 +20,7 @@ export function MultiSelect({
   placeholder: string;
   searchable?: boolean;
   maxLabel?: number;
+  single?: boolean;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -117,6 +119,11 @@ export function MultiSelect({
                 key={option.id}
                 className="flex cursor-pointer items-center justify-between rounded-[6px] px-2 py-1.5 hover:bg-[var(--surface-2)]"
                 onClick={() => {
+                  if (single) {
+                    onChange([option.id]);
+                    setOpen(false);
+                    return;
+                  }
                   onChange(
                     selected.includes(option.id)
                       ? selected.filter((id) => id !== option.id)

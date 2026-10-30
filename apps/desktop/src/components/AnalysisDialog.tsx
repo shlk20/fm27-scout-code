@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -40,6 +40,7 @@ export function AnalysisDialog() {
   const setInspectorOpen = useAppStore((state) => state.setInspectorOpen);
   const [tab, setTab] = useState<AnalysisTab>("overview");
   const [clubUid, setClubUid] = useState<number | null>(null);
+  const clubChosen = useRef(false);
   const overview = useAnalysisOverview(open);
   const options = useFilterOptions();
   const squad = useSquadAnalysis(tab === "squad" ? clubUid : null);
@@ -65,11 +66,18 @@ export function AnalysisDialog() {
   });
 
   useEffect(() => {
-    if (clubUid == null) {
-      const first = overview.data?.top_clubs[0]?.club_uid ?? options.data?.clubs[0]?.id ?? null;
-      if (first != null) setClubUid(first);
+    if (clubChosen.current || clubUid != null) return;
+    const first = overview.data?.top_clubs[0]?.club_uid ?? options.data?.clubs[0]?.id ?? null;
+    if (first != null) {
+      clubChosen.current = true;
+      setClubUid(first);
     }
   }, [clubUid, options.data, overview.data]);
+
+  const chooseClub = (uid: number | null) => {
+    clubChosen.current = true;
+    setClubUid(uid);
+  };
 
   const clubName = useMemo(
     () => options.data?.clubs.find((club) => club.id === clubUid)?.name,
@@ -157,7 +165,7 @@ export function AnalysisDialog() {
             <OverviewPanel
               data={overview.data}
               onClub={(uid) => {
-                setClubUid(uid);
+                chooseClub(uid);
                 setTab("squad");
               }}
             />
@@ -172,9 +180,10 @@ export function AnalysisDialog() {
                 <MultiSelect
                   options={options.data?.clubs ?? []}
                   selected={clubUid == null ? [] : [clubUid]}
-                  onChange={(ids) => setClubUid(ids[0] ?? null)}
+                  onChange={(ids) => chooseClub(ids[0] ?? null)}
                   placeholder={t("analysis.chooseClub")}
                   maxLabel={1}
+                  single
                 />
               </div>
               <span className="text-[10px] text-[var(--muted)]">
