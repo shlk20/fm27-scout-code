@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { formatRelativeTime, translate, type Locale } from "./i18n";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -13,9 +14,9 @@ export function formatValue(value: number | null | undefined): string {
   return value.toLocaleString("en-US");
 }
 
-export function formatWage(value: number | null | undefined): string {
+export function formatWage(value: number | null | undefined, locale: Locale = "en"): string {
   if (value == null) return "—";
-  return `${value.toLocaleString("en-US")}/周`;
+  return `${value.toLocaleString(locale === "zh-CN" ? "zh-CN" : "en-US")}${translate(locale, "common.perWeek")}`;
 }
 
 export function formatDate(value: string | null | undefined): string {
@@ -50,17 +51,8 @@ export function attributeBar(value: number, max = 20): string {
   return `${pct}%`;
 }
 
-export function relativeTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  const diff = Date.now() - date.getTime();
-  const minutes = Math.round(diff / 60_000);
-  if (minutes < 1) return "刚刚";
-  if (minutes < 60) return `${minutes} 分钟前`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
-  const days = Math.round(hours / 24);
-  return `${days} 天前`;
+export function relativeTime(iso: string, locale: Locale = "en"): string {
+  return formatRelativeTime(iso, locale);
 }
 
 export function formatBytes(bytes: number): string {

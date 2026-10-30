@@ -12,11 +12,14 @@ import {
 import { isTauri } from "@/lib/api";
 import { useSaves } from "@/lib/query";
 import { relativeTime } from "@/lib/utils";
+import { formatNumber } from "@/lib/i18n";
+import { useI18n } from "@/lib/useI18n";
 import { useOpenSave } from "@/lib/openSave";
 import { useAppStore } from "@/store/app";
 import { Badge, Button } from "./ui";
 
 export function Onboarding() {
+  const { t, locale } = useI18n();
   const { chooseAndOpen, openPath } = useOpenSave();
   const { data: saves = [] } = useSaves();
   const parsing = useAppStore((state) => state.parsing);
@@ -66,17 +69,17 @@ export function Onboarding() {
             <h1 className="text-[26px] font-semibold tracking-tight text-[var(--ink)]">
               FM27 Scout
             </h1>
-            <p className="text-xs text-[var(--muted)]">Football Manager 27 · macOS 球探工作台</p>
+            <p className="text-xs text-[var(--muted)]">{t("onboarding.subtitle")}</p>
           </div>
           <div className="ml-auto flex items-center gap-1.5">
             <Badge tone="accent">
-              <ShieldCheck size={10} /> 只读
+              <ShieldCheck size={10} /> {t("onboarding.readOnly")}
             </Badge>
             <Badge tone="outline">
-              <WifiOff size={10} /> 无网络
+              <WifiOff size={10} /> {t("onboarding.offline")}
             </Badge>
             <Badge tone="outline">
-              <LockKeyhole size={10} /> 本地缓存
+              <LockKeyhole size={10} /> {t("onboarding.localCache")}
             </Badge>
           </div>
         </div>
@@ -92,35 +95,35 @@ export function Onboarding() {
             <Upload size={28} />
           </div>
           <h2 className="mt-4 text-lg font-semibold tracking-tight text-[var(--ink)]">
-            {dragging ? "松开以打开存档" : "打开一个 .fm 存档"}
+            {dragging ? t("onboarding.dropToOpen") : t("onboarding.openSave")}
           </h2>
           <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-[var(--muted)]">
-            选择或拖入 Football Manager 27 存档。文件只会被读取并复制到本地缓存，不会修改存档，也不会上传任何数据。
+            {t("onboarding.description")}
           </p>
           <div className="mt-5 flex items-center justify-center gap-2">
             <Button variant="primary" size="lg" onClick={() => void chooseAndOpen()} disabled={parsing}>
               <FolderOpen size={16} />
-              选择存档…
+              {t("onboarding.choose")}
             </Button>
             {saves[0] && (
               <Button variant="secondary" size="lg" onClick={() => void openPath(saves[0].path)} disabled={parsing}>
                 <Database size={15} />
-                打开上次存档
+                {t("onboarding.openLast")}
               </Button>
             )}
           </div>
           <div className="mt-4 flex items-center justify-center gap-4 text-[10px] text-[var(--muted)]">
             <span className="inline-flex items-center gap-1">
               <HardDrive size={11} />
-              自动识别 27.0.0+
+              {t("onboarding.autoDetect")}
             </span>
             <span className="inline-flex items-center gap-1">
               <LockKeyhole size={11} />
-              默认隐藏隐藏属性
+              {t("onboarding.hiddenByDefault")}
             </span>
             <span className="inline-flex items-center gap-1">
               <WifiOff size={11} />
-              完全离线
+              {t("onboarding.fullyOffline")}
             </span>
           </div>
         </div>
@@ -129,9 +132,9 @@ export function Onboarding() {
           <div className="mt-6">
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                最近存档
+                {t("onboarding.recentSaves")}
               </h3>
-              <span className="text-[10px] text-[var(--muted)]">已缓存，打开无需重新解析</span>
+              <span className="text-[10px] text-[var(--muted)]">{t("onboarding.cachedHint")}</span>
             </div>
             <div className="grid gap-2">
               {saves.slice(0, 4).map((save) => (
@@ -151,14 +154,22 @@ export function Onboarding() {
                     <div className="mt-0.5 flex items-center gap-2 text-[10px] text-[var(--muted)]">
                       <span>{save.build}</span>
                       <span>·</span>
-                      <span>{save.game_date ?? "未知日期"}</span>
+                      <span>{save.game_date ?? t("common.unknownDate")}</span>
                       <span>·</span>
-                      <span>{save.players.toLocaleString("en-US")} 名球员</span>
+                      <span>
+                        {t("common.playersCount", {
+                          count: formatNumber(save.players, locale),
+                        })}
+                      </span>
                     </div>
                   </div>
                   <div className="text-right text-[9px] text-[var(--muted)]">
-                    <div>{relativeTime(save.parsed_at)}</div>
-                    <div className="mt-0.5 font-mono">{save.clubs.toLocaleString("en-US")} 俱乐部</div>
+                    <div>{relativeTime(save.parsed_at, locale)}</div>
+                    <div className="mt-0.5 font-mono">
+                      {t("common.clubsCount", {
+                        count: formatNumber(save.clubs, locale),
+                      })}
+                    </div>
                   </div>
                 </button>
               ))}
@@ -167,7 +178,7 @@ export function Onboarding() {
         )}
 
         <p className="mt-6 text-center text-[10px] leading-relaxed text-[var(--muted)]">
-          非官方工具，与 Sports Interactive / SEGA 无关。解析逻辑参考 MIT 许可的 fmsave 项目。
+          {t("onboarding.disclaimer")}
         </p>
       </div>
     </div>

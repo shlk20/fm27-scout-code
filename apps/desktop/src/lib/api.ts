@@ -105,12 +105,12 @@ export async function exportPlayers(
   return invoke<ExportReport>("export_players", { query, format, path });
 }
 
-export async function pickSaveFile(): Promise<string | null> {
+export async function pickSaveFile(filterName = "Football Manager saves"): Promise<string | null> {
   if (!isTauri) return MOCK_SUMMARY.path;
   const selected = await open({
     multiple: false,
     directory: false,
-    filters: [{ name: "Football Manager 存档", extensions: ["fm"] }],
+    filters: [{ name: filterName, extensions: ["fm"] }],
   });
   return typeof selected === "string" ? selected : null;
 }
@@ -146,6 +146,15 @@ export interface AppInfo {
   version: string;
   nation_names: number;
   competition_names: number;
+}
+
+export async function setAppLanguage(locale: "en" | "zh-CN"): Promise<void> {
+  if (!isTauri) return;
+  try {
+    await invoke("set_app_language", { locale });
+  } catch {
+    // The native menu is a polish layer; the in-app UI works without it.
+  }
 }
 
 export async function appInfo(): Promise<AppInfo> {

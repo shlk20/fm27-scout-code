@@ -432,10 +432,17 @@ export const POSITION_LABELS: Record<string, string> = {
   wbr: "WBR",
 };
 
-export const ATTRIBUTE_GROUPS: Record<string, { label: string; keys: string[] }[]> = {
+export type AttributeGroupKey =
+  | "technical"
+  | "mental"
+  | "physical"
+  | "goalkeeping"
+  | "hidden";
+
+export const ATTRIBUTE_GROUPS: Record<string, { labelKey: AttributeGroupKey; keys: string[] }[]> = {
   technical: [
     {
-      label: "技术",
+      labelKey: "technical",
       keys: [
         "corners",
         "crossing",
@@ -454,7 +461,7 @@ export const ATTRIBUTE_GROUPS: Record<string, { label: string; keys: string[] }[
       ],
     },
     {
-      label: "精神",
+      labelKey: "mental",
       keys: [
         "aggression",
         "anticipation",
@@ -473,7 +480,7 @@ export const ATTRIBUTE_GROUPS: Record<string, { label: string; keys: string[] }[
       ],
     },
     {
-      label: "身体",
+      labelKey: "physical",
       keys: [
         "acceleration",
         "agility",
@@ -488,7 +495,7 @@ export const ATTRIBUTE_GROUPS: Record<string, { label: string; keys: string[] }[
   ],
   goalkeeping: [
     {
-      label: "门将",
+      labelKey: "goalkeeping",
       keys: [
         "aerial_reach",
         "command_of_area",
@@ -506,7 +513,7 @@ export const ATTRIBUTE_GROUPS: Record<string, { label: string; keys: string[] }[
   ],
   hidden: [
     {
-      label: "隐藏属性",
+      labelKey: "hidden",
       keys: [
         "consistency",
         "dirtiness",

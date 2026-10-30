@@ -302,59 +302,142 @@ fn app_info(state: State<'_, AppState>) -> AppInfo {
     }
 }
 
-fn install_menu(app: &tauri::App) -> tauri::Result<()> {
-    let handle = app.handle();
-    let open = MenuItem::with_id(handle, "open", "打开存档…", true, Some("CmdOrCtrl+O"))?;
-    let export = MenuItem::with_id(handle, "export", "导出…", true, Some("CmdOrCtrl+E"))?;
-    let close = PredefinedMenuItem::close_window(handle, Some("关闭窗口"))?;
-    let settings = MenuItem::with_id(handle, "settings", "设置…", true, Some("CmdOrCtrl+,"))?;
+struct MenuLabels {
+    open: &'static str,
+    export: &'static str,
+    close_window: &'static str,
+    settings: &'static str,
+    sidebar: &'static str,
+    inspector: &'static str,
+    hidden: &'static str,
+    compare: &'static str,
+    analysis: &'static str,
+    undo: &'static str,
+    redo: &'static str,
+    cut: &'static str,
+    copy: &'static str,
+    paste: &'static str,
+    select_all: &'static str,
+    about: &'static str,
+    quit: &'static str,
+    help: &'static str,
+    file_menu: &'static str,
+    edit_menu: &'static str,
+    view_menu: &'static str,
+    help_menu: &'static str,
+}
+
+fn menu_labels(locale: &str) -> MenuLabels {
+    if locale.to_ascii_lowercase().starts_with("zh") {
+        MenuLabels {
+            open: "打开存档…",
+            export: "导出…",
+            close_window: "关闭窗口",
+            settings: "设置…",
+            sidebar: "显示/隐藏筛选栏",
+            inspector: "显示/隐藏球员档案",
+            hidden: "开关隐藏属性",
+            compare: "球员对比",
+            analysis: "分析中心",
+            undo: "撤销",
+            redo: "重做",
+            cut: "剪切",
+            copy: "复制",
+            paste: "粘贴",
+            select_all: "全选",
+            about: "关于 FM27 Scout",
+            quit: "退出 FM27 Scout",
+            help: "帮助与快捷键",
+            file_menu: "文件",
+            edit_menu: "编辑",
+            view_menu: "视图",
+            help_menu: "帮助",
+        }
+    } else {
+        MenuLabels {
+            open: "Open Save…",
+            export: "Export…",
+            close_window: "Close Window",
+            settings: "Settings…",
+            sidebar: "Show/Hide Filters",
+            inspector: "Show/Hide Player Profile",
+            hidden: "Toggle Hidden Attributes",
+            compare: "Compare Players",
+            analysis: "Analysis Centre",
+            undo: "Undo",
+            redo: "Redo",
+            cut: "Cut",
+            copy: "Copy",
+            paste: "Paste",
+            select_all: "Select All",
+            about: "About FM27 Scout",
+            quit: "Quit FM27 Scout",
+            help: "Help & Shortcuts",
+            file_menu: "File",
+            edit_menu: "Edit",
+            view_menu: "View",
+            help_menu: "Help",
+        }
+    }
+}
+
+fn build_menu<R: tauri::Runtime>(
+    handle: &tauri::AppHandle<R>,
+    locale: &str,
+) -> tauri::Result<Menu<R>> {
+    let labels = menu_labels(locale);
+    let open = MenuItem::with_id(handle, "open", labels.open, true, Some("CmdOrCtrl+O"))?;
+    let export = MenuItem::with_id(handle, "export", labels.export, true, Some("CmdOrCtrl+E"))?;
+    let close = PredefinedMenuItem::close_window(handle, Some(labels.close_window))?;
+    let settings =
+        MenuItem::with_id(handle, "settings", labels.settings, true, Some("CmdOrCtrl+,"))?;
     let sidebar = MenuItem::with_id(
         handle,
         "sidebar",
-        "显示/隐藏筛选栏",
+        labels.sidebar,
         true,
         Some("CmdOrCtrl+\\"),
     )?;
     let inspector = MenuItem::with_id(
         handle,
         "inspector",
-        "显示/隐藏球员档案",
+        labels.inspector,
         true,
         Some("CmdOrCtrl+Shift+I"),
     )?;
     let hidden = MenuItem::with_id(
         handle,
         "hidden",
-        "开关隐藏属性",
+        labels.hidden,
         true,
         Some("CmdOrCtrl+Shift+H"),
     )?;
     let compare = MenuItem::with_id(
         handle,
         "compare",
-        "球员对比",
+        labels.compare,
         true,
         Some("CmdOrCtrl+Shift+C"),
     )?;
     let analysis = MenuItem::with_id(
         handle,
         "analysis",
-        "分析中心",
+        labels.analysis,
         true,
         Some("CmdOrCtrl+Shift+A"),
     )?;
-    let undo = PredefinedMenuItem::undo(handle, Some("撤销"))?;
-    let redo = PredefinedMenuItem::redo(handle, Some("重做"))?;
-    let cut = PredefinedMenuItem::cut(handle, Some("剪切"))?;
-    let copy = PredefinedMenuItem::copy(handle, Some("复制"))?;
-    let paste = PredefinedMenuItem::paste(handle, Some("粘贴"))?;
-    let select_all = PredefinedMenuItem::select_all(handle, Some("全选"))?;
-    let about = PredefinedMenuItem::about(handle, Some("关于 FM27 Scout"), None)?;
-    let quit = PredefinedMenuItem::quit(handle, Some("退出 FM27 Scout"))?;
+    let undo = PredefinedMenuItem::undo(handle, Some(labels.undo))?;
+    let redo = PredefinedMenuItem::redo(handle, Some(labels.redo))?;
+    let cut = PredefinedMenuItem::cut(handle, Some(labels.cut))?;
+    let copy = PredefinedMenuItem::copy(handle, Some(labels.copy))?;
+    let paste = PredefinedMenuItem::paste(handle, Some(labels.paste))?;
+    let select_all = PredefinedMenuItem::select_all(handle, Some(labels.select_all))?;
+    let about = PredefinedMenuItem::about(handle, Some(labels.about), None)?;
+    let quit = PredefinedMenuItem::quit(handle, Some(labels.quit))?;
     let helper = MenuItem::with_id(
         handle,
         "help",
-        "帮助与快捷键",
+        labels.help,
         true,
         Some("CmdOrCtrl+Shift+/"),
     )?;
@@ -370,31 +453,48 @@ fn install_menu(app: &tauri::App) -> tauri::Result<()> {
         true,
         &[&about, &sep1, &settings, &sep2, &quit],
     )?;
-    let file_menu = Submenu::with_items(handle, "文件", true, &[&open, &export, &sep3, &close])?;
+    let file_menu = Submenu::with_items(
+        handle,
+        labels.file_menu,
+        true,
+        &[&open, &export, &sep3, &close],
+    )?;
     let edit_menu = Submenu::with_items(
         handle,
-        "编辑",
+        labels.edit_menu,
         true,
         &[&undo, &redo, &sep4, &cut, &copy, &paste, &select_all],
     )?;
     let view_menu = Submenu::with_items(
         handle,
-        "视图",
+        labels.view_menu,
         true,
         &[&sidebar, &inspector, &sep5, &hidden, &compare, &analysis],
     )?;
-    let help_menu = Submenu::with_items(handle, "帮助", true, &[&helper])?;
-    let menu = Menu::with_items(
+    let help_menu = Submenu::with_items(handle, labels.help_menu, true, &[&helper])?;
+    Menu::with_items(
         handle,
         &[&app_menu, &file_menu, &edit_menu, &view_menu, &help_menu],
-    )?;
-    app.set_menu(menu)?;
+    )
+}
+
+fn install_menu(app: &tauri::App) -> tauri::Result<()> {
+    // The frontend resolves the persisted/system locale immediately after launch
+    // and calls `set_app_language`, which rebuilds this menu in the right language.
+    app.set_menu(build_menu(app.handle(), "en")?)?;
     app.on_menu_event(|app, event| {
         let action = event.id().as_ref();
         if !action.is_empty() {
             let _ = app.emit("menu://action", action);
         }
     });
+    Ok(())
+}
+
+#[tauri::command]
+fn set_app_language(app: AppHandle, locale: String) -> Result<(), String> {
+    let menu = build_menu(&app, &locale).map_err(error_string)?;
+    app.set_menu(menu).map_err(error_string)?;
     Ok(())
 }
 
@@ -433,6 +533,7 @@ pub fn run() {
             delete_save,
             export_players,
             app_info,
+            set_app_language,
             take_pending_open,
             log_message
         ])

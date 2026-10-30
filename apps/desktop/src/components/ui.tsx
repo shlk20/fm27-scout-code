@@ -9,6 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useI18n } from "@/lib/useI18n";
 import { cn } from "@/lib/utils";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "gold";
@@ -232,6 +233,7 @@ export function Modal({
   footer?: ReactNode;
   width?: string;
 }) {
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
     const handler = (event: KeyboardEvent) => {
@@ -245,7 +247,7 @@ export function Modal({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <button
-        aria-label="关闭"
+        aria-label={t("common.close")}
         className="absolute inset-0 cursor-default bg-black/35 backdrop-blur-[2px] dark:bg-black/55"
         onClick={onClose}
       />
@@ -262,7 +264,7 @@ export function Modal({
             <div className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">{title}</div>
             {description && <div className="mt-0.5 text-xs text-[var(--muted)]">{description}</div>}
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="关闭">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label={t("common.close")}>
             <X size={16} />
           </Button>
         </div>

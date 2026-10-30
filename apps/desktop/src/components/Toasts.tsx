@@ -1,10 +1,12 @@
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
+import { useI18n } from "@/lib/useI18n";
 import { useAppStore } from "@/store/app";
 import { cn } from "@/lib/utils";
 
 export function Toasts() {
   const toasts = useAppStore((state) => state.toasts);
   const dismiss = useAppStore((state) => state.dismissToast);
+  const { t } = useI18n();
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-[70] flex w-[340px] flex-col gap-2">
       {toasts.map((toast) => (
@@ -49,7 +51,7 @@ export function Toasts() {
             type="button"
             onClick={() => dismiss(toast.id)}
             className="rounded p-0.5 text-[var(--muted)] hover:bg-[var(--surface-2)]"
-            aria-label="关闭提示"
+            aria-label={t("toast.close")}
           >
             <X size={12} />
           </button>

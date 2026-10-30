@@ -4,6 +4,7 @@ import {
   Database,
   Eye,
   Info,
+  Languages,
   LockKeyhole,
   Monitor,
   Moon,
@@ -12,11 +13,15 @@ import {
 } from "lucide-react";
 import { appInfo, deleteSave } from "@/lib/api";
 import { useSaves } from "@/lib/query";
-import { formatBytes, relativeTime } from "@/lib/utils";
+import { formatNumber } from "@/lib/i18n";
+import { LANGUAGE_OPTIONS, type Language } from "@/lib/i18n";
+import { useI18n } from "@/lib/useI18n";
+import { relativeTime } from "@/lib/utils";
 import { useAppStore, type DisplayMode, type Theme } from "@/store/app";
-import { Badge, Button, Checkbox, Modal, Select, Switch } from "./ui";
+import { Badge, Button, Modal, Select, Switch } from "./ui";
 
 export function SettingsDialog() {
+  const { t, locale } = useI18n();
   const open = useAppStore((state) => state.settingsOpen);
   const setOpen = useAppStore((state) => state.setSettingsOpen);
   const hiddenEnabled = useAppStore((state) => state.hiddenEnabled);
@@ -25,6 +30,8 @@ export function SettingsDialog() {
   const setDisplayMode = useAppStore((state) => state.setDisplayMode);
   const theme = useAppStore((state) => state.theme);
   const setTheme = useAppStore((state) => state.setTheme);
+  const language = useAppStore((state) => state.language);
+  const setLanguage = useAppStore((state) => state.setLanguage);
   const pushToast = useAppStore((state) => state.pushToast);
   const currentSaveId = useAppStore((state) => state.saveId);
   const clearSession = useAppStore((state) => state.clearSession);
@@ -45,28 +52,57 @@ export function SettingsDialog() {
     <Modal
       open={open}
       onClose={() => setOpen(false)}
-      title="设置"
-      description="显示、隐私与本地缓存"
+      title={t("settings.title")}
+      description={t("settings.description")}
       width="max-w-[660px]"
       footer={
         <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
-          完成
+          {t("common.done")}
         </Button>
       }
     >
       <div className="space-y-5 p-5">
         <section className="space-y-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            显示
+            {t("settings.language")}
+          </h3>
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-start gap-2">
+                <Languages size={14} className="mt-0.5 text-[var(--accent)]" />
+                <p className="max-w-sm text-[10px] leading-relaxed text-[var(--muted)]">
+                  {t("settings.languageDescription")}
+                </p>
+              </div>
+              <Select
+                value={language}
+                onChange={(event) => setLanguage(event.target.value as Language)}
+                className="max-w-[160px]"
+              >
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value === "system"
+                      ? t("settings.languageSystem")
+                      : option.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            {t("settings.display")}
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <div className="text-[11px] text-[var(--muted)]">主题</div>
+              <div className="text-[11px] text-[var(--muted)]">{t("settings.theme")}</div>
               <div className="flex gap-1">
                 {[
-                  ["system", "跟随系统", <Monitor size={13} key="system" />],
-                  ["light", "浅色", <Sun size={13} key="light" />],
-                  ["dark", "深色", <Moon size={13} key="dark" />],
+                  ["system", t("settings.themeSystem"), <Monitor size={13} key="system" />],
+                  ["light", t("settings.themeLight"), <Sun size={13} key="light" />],
+                  ["dark", t("settings.themeDark"), <Moon size={13} key="dark" />],
                 ].map(([value, label, icon]) => (
                   <button
                     key={value as string}
@@ -85,13 +121,13 @@ export function SettingsDialog() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <div className="text-[11px] text-[var(--muted)]">数值显示</div>
+              <div className="text-[11px] text-[var(--muted)]">{t("settings.displayMode")}</div>
               <Select
                 value={displayMode}
                 onChange={(event) => setDisplayMode(event.target.value as DisplayMode)}
               >
-                <option value="display">显示值 1–20</option>
-                <option value="raw">原始值 1–100</option>
+                <option value="display">{t("settings.displayValues")}</option>
+                <option value="raw">{t("settings.rawValues")}</option>
               </Select>
             </div>
           </div>
@@ -99,16 +135,16 @@ export function SettingsDialog() {
 
         <section className="space-y-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            隐藏属性
+            {t("settings.hiddenAttributes")}
           </h3>
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
             <div>
               <div className="flex items-center gap-2 text-[12px] font-semibold text-[var(--ink)]">
                 {hiddenEnabled ? <Eye size={14} /> : <LockKeyhole size={14} />}
-                显示隐藏属性与性格
+                {t("settings.showHidden")}
               </div>
               <p className="mt-1 max-w-sm text-[10px] leading-relaxed text-[var(--muted)]">
-                默认关闭。开启后显示稳定、大赛、受伤倾向、肮脏、多面性以及职业、雄心等性格数值。仅限单机使用。
+                {t("settings.hiddenDescription")}
               </p>
             </div>
             <Switch
@@ -117,13 +153,13 @@ export function SettingsDialog() {
                 setHiddenEnabled(enabled);
                 if (enabled) {
                   pushToast({
-                    title: "隐藏属性已开启",
-                    description: "仅限单机使用，线上联赛可能被视为作弊。",
+                    title: t("toast.hiddenOn.title"),
+                    description: t("toast.hiddenOn.description"),
                     tone: "default",
                   });
                 }
               }}
-              label="隐藏属性"
+              label={t("settings.hiddenLabel")}
             />
           </div>
         </section>
@@ -131,14 +167,14 @@ export function SettingsDialog() {
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-              本地缓存
+              {t("settings.localCache")}
             </h3>
             <span className="font-mono text-[9px] text-[var(--muted)]">{dataDir}</span>
           </div>
           <div className="divide-y divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)]">
             {saves.length === 0 && (
               <div className="px-3 py-6 text-center text-[11px] text-[var(--muted)]">
-                还没有缓存存档
+                {t("settings.noSaves")}
               </div>
             )}
             {saves.map((save) => (
@@ -147,8 +183,11 @@ export function SettingsDialog() {
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[11px] font-semibold text-[var(--ink)]">{save.file_name}</div>
                   <div className="mt-0.5 text-[9px] text-[var(--muted)]">
-                    {save.players.toLocaleString("en-US")} 名球员 · {save.game_date ?? "未知日期"} · 解析于{" "}
-                    {relativeTime(save.parsed_at)}
+                    {t("settings.saveMeta", {
+                      players: formatNumber(save.players, locale),
+                      date: save.game_date ?? t("common.unknownDate"),
+                      relative: relativeTime(save.parsed_at, locale),
+                    })}
                   </div>
                 </div>
                 <Button
@@ -159,9 +198,13 @@ export function SettingsDialog() {
                     await deleteSave(save.id);
                     await queryClient.invalidateQueries({ queryKey: ["saves"] });
                     if (save.id === currentSaveId) clearSession();
-                    pushToast({ title: "已删除缓存", description: save.file_name, tone: "success" });
+                    pushToast({
+                      title: t("settings.deleted"),
+                      description: save.file_name,
+                      tone: "success",
+                    });
                   }}
-                  aria-label="删除缓存"
+                  aria-label={t("settings.deleteCache")}
                 >
                   <Trash2 size={13} />
                 </Button>
@@ -169,51 +212,52 @@ export function SettingsDialog() {
             ))}
           </div>
           <p className="text-[9px] leading-relaxed text-[var(--muted)]">
-            缓存只保存在本机应用数据目录。删除缓存不会影响原存档，下次打开时会重新解析。
+            {t("settings.cacheNote")}
           </p>
         </section>
 
         <section className="space-y-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            名称表
+            {t("settings.nameTables")}
           </h3>
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3 text-[10px] leading-relaxed text-[var(--muted)]">
             <div className="flex items-center justify-between">
-              <span>国家 / 地区名称</span>
-              <span className="font-mono text-[var(--ink)]">{info?.nation_names ?? 0} 项</span>
+              <span>{t("settings.nationNames")}</span>
+              <span className="font-mono text-[var(--ink)]">
+                {t("common.entriesCount", { count: info?.nation_names ?? 0 })}
+              </span>
             </div>
             <div className="mt-1 flex items-center justify-between">
-              <span>赛事名称（用户 CSV）</span>
-              <span className="font-mono text-[var(--ink)]">{info?.competition_names ?? 0} 项</span>
+              <span>{t("settings.competitionNames")}</span>
+              <span className="font-mono text-[var(--ink)]">
+                {t("common.entriesCount", { count: info?.competition_names ?? 0 })}
+              </span>
             </div>
-            <p className="mt-2">
-              国家名称随应用内置；赛事名称不入库，可由 `shared/competition-names.csv`
-              以 database_id 为键补充，避免打包游戏受版权保护的数据。
-            </p>
+            <p className="mt-2">{t("settings.nameTableNote")}</p>
           </div>
         </section>
 
         <section className="space-y-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            关于
+            {t("settings.about")}
           </h3>
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3 text-[10px] leading-relaxed text-[var(--muted)]">
             <div className="flex items-center gap-2 text-[11px] font-semibold text-[var(--ink)]">
               <Info size={13} />
               FM27 Scout 0.2.0
             </div>
-            <div className="mt-1">
-              只读、本地、无网络的 Football Manager 27 球探工具。不会修改存档，不读取游戏内存，不上传任何数据。
-            </div>
+            <div className="mt-1">{t("settings.aboutDescription")}</div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Badge tone="outline">解析器 {saves[0]?.parser_version ?? "0.1.0"}</Badge>
+              <Badge tone="outline">
+                {t("settings.parserLabel", {
+                  version: saves[0]?.parser_version ?? "0.1.0",
+                })}
+              </Badge>
               <Badge tone="outline">Tauri 2</Badge>
               <Badge tone="outline">Rust</Badge>
               <Badge tone="outline">fmsave · MIT</Badge>
             </div>
-            <div className="mt-2">
-              非官方工具，与 Sports Interactive / SEGA 无关。线上联赛使用隐藏属性可能违反规则。
-            </div>
+            <div className="mt-2">{t("settings.disclaimer")}</div>
           </div>
         </section>
       </div>

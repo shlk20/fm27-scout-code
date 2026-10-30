@@ -1,0 +1,436 @@
+import type { Locale } from "./i18n";
+import { ATTRIBUTE_LABELS } from "./types";
+
+/**
+ * Locale-aware labels for values that come from the parser or from the fixed
+ * domain tables. Database values themselves are never rewritten.
+ */
+
+const ATTRIBUTE_LABELS_EN: Record<string, string> = {
+  crossing: "Crossing",
+  dribbling: "Dribbling",
+  finishing: "Finishing",
+  heading: "Heading",
+  long_shots: "Long Shots",
+  marking: "Marking",
+  off_the_ball: "Off the Ball",
+  passing: "Passing",
+  penalty_taking: "Penalty Taking",
+  tackling: "Tackling",
+  vision: "Vision",
+  handling: "Handling",
+  aerial_reach: "Aerial Reach",
+  command_of_area: "Command of Area",
+  communication: "Communication",
+  kicking: "Kicking",
+  throwing: "Throwing",
+  anticipation: "Anticipation",
+  decisions: "Decisions",
+  one_on_ones: "One on Ones",
+  positioning: "Positioning",
+  reflexes: "Reflexes",
+  first_touch: "First Touch",
+  technique: "Technique",
+  flair: "Flair",
+  corners: "Corners",
+  teamwork: "Teamwork",
+  work_rate: "Work Rate",
+  long_throws: "Long Throws",
+  eccentricity: "Eccentricity",
+  rushing_out: "Rushing Out",
+  punching: "Punching",
+  acceleration: "Acceleration",
+  free_kick_taking: "Free Kick Taking",
+  strength: "Strength",
+  stamina: "Stamina",
+  pace: "Pace",
+  jumping_reach: "Jumping Reach",
+  leadership: "Leadership",
+  dirtiness: "Dirtiness",
+  balance: "Balance",
+  bravery: "Bravery",
+  consistency: "Consistency",
+  aggression: "Aggression",
+  agility: "Agility",
+  important_matches: "Important Matches",
+  injury_proneness: "Injury Proneness",
+  versatility: "Versatility",
+  natural_fitness: "Natural Fitness",
+  determination: "Determination",
+  composure: "Composure",
+  concentration: "Concentration",
+};
+
+const PERSONALITY_LABELS_EN: Record<string, string> = {
+  adaptability: "Adaptability",
+  ambition: "Ambition",
+  loyalty: "Loyalty",
+  pressure: "Pressure",
+  professionalism: "Professionalism",
+  sportsmanship: "Sportsmanship",
+  temperament: "Temperament",
+  controversy: "Controversy",
+};
+
+const PERSONALITY_LABELS_ZH: Record<string, string> = {
+  adaptability: "适应",
+  ambition: "雄心",
+  loyalty: "忠诚",
+  pressure: "抗压",
+  professionalism: "职业",
+  sportsmanship: "体育精神",
+  temperament: "气质",
+  controversy: "争议",
+};
+
+const SEVERITY_LABELS: Record<Locale, Record<number, string>> = {
+  en: { 0: "Minor", 1: "Moderate", 2: "Severe", 3: "Major" },
+  "zh-CN": { 0: "轻微", 1: "轻度", 2: "中度", 3: "重度" },
+};
+
+const ROLE_NAMES_EN: Record<string, string> = {
+  goalkeeper: "Goalkeeper (Defend)",
+  sweeper_keeper: "Sweeper Keeper (Support)",
+  ball_playing_keeper: "Ball-Playing Keeper (Defend)",
+  central_defender: "Central Defender (Defend)",
+  ball_playing_defender: "Ball-Playing Defender (Defend)",
+  no_nonsense_centre_back: "No-Nonsense Centre-Back",
+  full_back: "Full-Back (Defend)",
+  wing_back: "Wing-Back (Attack)",
+  inverted_full_back: "Inverted Full-Back (Support)",
+  defensive_midfielder: "Defensive Midfielder (Defend)",
+  anchor: "Anchor (Defend)",
+  ball_winning_midfielder: "Ball-Winning Midfielder (Defend)",
+  deep_lying_playmaker: "Deep-Lying Playmaker (Support)",
+  central_midfielder: "Central Midfielder (Support)",
+  box_to_box_midfielder: "Box-to-Box Midfielder (Support)",
+  mezzala: "Mezzala (Attack)",
+  advanced_playmaker: "Advanced Playmaker (Attack)",
+  attacking_midfielder: "Attacking Midfielder (Attack)",
+  trequartista: "Trequartista (Attack)",
+  shadow_striker: "Shadow Striker (Attack)",
+  winger: "Winger (Attack)",
+  inverted_winger: "Inverted Winger (Attack)",
+  inside_forward: "Inside Forward (Attack)",
+  advanced_forward: "Advanced Forward (Attack)",
+  poacher: "Poacher (Attack)",
+  complete_forward: "Complete Forward (Attack)",
+  target_forward: "Target Forward (Attack)",
+  deep_lying_forward: "Deep-Lying Forward (Support)",
+  pressing_forward: "Pressing Forward (Attack)",
+};
+
+const ROLE_GROUPS_EN: Record<string, string> = {
+  门将: "Goalkeepers",
+  后卫: "Defenders",
+  中场: "Midfielders",
+  前场: "Attackers",
+  前锋: "Forwards",
+};
+
+const TRAIT_LABELS_ZH: Record<number, string> = {
+  0: "左路带球",
+  1: "右路带球",
+  2: "中路带球",
+  4: "拉边接应",
+  5: "积极前插",
+  7: "常传威胁球",
+  8: "远射",
+  13: "喜欢反越位",
+  19: "回撤拿球",
+  22: "控制节奏",
+  27: "人球分过",
+  34: "避免使用逆足",
+  37: "倒地铲抢",
+  43: "尝试长传",
+  51: "经常带球",
+  59: "提前传中",
+};
+
+const BAND_LABELS_EN: Record<string, string> = {
+  门将: "Goalkeepers",
+  后卫: "Defenders",
+  中场: "Midfielders",
+  前锋: "Forwards",
+};
+
+/** Chinese country name -> English name, generated from shared/nation-names.csv. */
+const NATION_NAMES_EN: Record<string, string> = {
+  阿尔及利亚: "Algeria",
+  安哥拉: "Angola",
+  贝宁: "Benin",
+  博茨瓦纳: "Botswana",
+  布基纳法索: "Burkina Faso",
+  布隆迪: "Burundi",
+  喀麦隆: "Cameroon",
+  佛得角: "Cape Verde",
+  中非共和国: "Central African Republic",
+  乍得: "Chad",
+  吉布提: "Djibouti",
+  埃及: "Egypt",
+  赤道几内亚: "Equatorial Guinea",
+  埃塞俄比亚: "Ethiopia",
+  加蓬: "Gabon",
+  冈比亚: "Gambia",
+  加纳: "Ghana",
+  几内亚: "Guinea",
+  几内亚比绍: "Guinea-Bissau",
+  科特迪瓦: "Ivory Coast",
+  肯尼亚: "Kenya",
+  莱索托: "Lesotho",
+  利比里亚: "Liberia",
+  利比亚: "Libya",
+  马达加斯加: "Madagascar",
+  马拉维: "Malawi",
+  马里: "Mali",
+  毛里塔尼亚: "Mauritania",
+  毛里求斯: "Mauritius",
+  摩洛哥: "Morocco",
+  莫桑比克: "Mozambique",
+  纳米比亚: "Namibia",
+  尼日尔: "Niger",
+  尼日利亚: "Nigeria",
+  卢旺达: "Rwanda",
+  圣多美和普林西比: "Sao Tome & Principe",
+  塞内加尔: "Senegal",
+  塞舌尔: "Seychelles",
+  塞拉利昂: "Sierra Leone",
+  索马里: "Somalia",
+  南非: "South Africa",
+  苏丹: "Sudan",
+  斯威士兰: "Eswatini",
+  坦桑尼亚: "Tanzania",
+  刚果: "Congo",
+  多哥: "Togo",
+  突尼斯: "Tunisia",
+  乌干达: "Uganda",
+  刚果共和国: "Congo",
+  赞比亚: "Zambia",
+  津巴布韦: "Zimbabwe",
+  阿富汗: "Afghanistan",
+  巴林: "Bahrain",
+  孟加拉国: "Bangladesh",
+  文莱: "Brunei",
+  中国: "China",
+  中国香港: "Hong Kong",
+  印度: "India",
+  印度尼西亚: "Indonesia",
+  伊朗: "Iran",
+  伊拉克: "Iraq",
+  日本: "Japan",
+  约旦: "Jordan",
+  柬埔寨: "Cambodia",
+  哈萨克斯坦: "Kazakhstan",
+  科威特: "Kuwait",
+  吉尔吉斯斯坦: "Kyrgyzstan",
+  老挝: "Laos",
+  黎巴嫩: "Lebanon",
+  中国澳门: "Macau",
+  马来西亚: "Malaysia",
+  马尔代夫: "Maldives",
+  缅甸: "Myanmar",
+  尼泊尔: "Nepal",
+  朝鲜: "North Korea",
+  阿曼: "Oman",
+  巴基斯坦: "Pakistan",
+  卡塔尔: "Qatar",
+  沙特阿拉伯: "Saudi Arabia",
+  新加坡: "Singapore",
+  韩国: "South Korea",
+  斯里兰卡: "Sri Lanka",
+  叙利亚: "Syria",
+  中国台北: "Chinese Taipei",
+  塔吉克斯坦: "Tajikistan",
+  泰国: "Thailand",
+  菲律宾: "Philippines",
+  土库曼斯坦: "Turkmenistan",
+  阿联酋: "United Arab Emirates",
+  乌兹别克斯坦: "Uzbekistan",
+  越南: "Vietnam",
+  也门: "Yemen",
+  安提瓜和巴布达: "Antigua & Barbuda",
+  阿鲁巴: "Aruba",
+  巴巴多斯: "Barbados",
+  伯利兹: "Belize",
+  百慕大: "Bermuda",
+  加拿大: "Canada",
+  开曼群岛: "Cayman Islands",
+  哥斯达黎加: "Costa Rica",
+  古巴: "Cuba",
+  多米尼克: "Dominica",
+  萨尔瓦多: "El Salvador",
+  格林纳达: "Grenada",
+  危地马拉: "Guatemala",
+  圭亚那: "Guyana",
+  海地: "Haiti",
+  洪都拉斯: "Honduras",
+  牙买加: "Jamaica",
+  墨西哥: "Mexico",
+  荷属安的列斯: "Netherlands Antilles",
+  尼加拉瓜: "Nicaragua",
+  巴拿马: "Panama",
+  波多黎各: "Puerto Rico",
+  圣卢西亚: "St Lucia",
+  圣基茨和尼维斯: "St Kitts & Nevis",
+  圣文森特和格林纳丁斯: "St Vincent",
+  苏里南: "Surinam",
+  巴哈马: "Bahamas",
+  特立尼达和多巴哥: "Trinidad & Tobago",
+  美国: "United States",
+  阿尔巴尼亚: "Albania",
+  安道尔: "Andorra",
+  亚美尼亚: "Armenia",
+  奥地利: "Austria",
+  阿塞拜疆: "Azerbaijan",
+  比利时: "Belgium",
+  白俄罗斯: "Belarus",
+  波黑: "Bosnia",
+  保加利亚: "Bulgaria",
+  克罗地亚: "Croatia",
+  塞浦路斯: "Cyprus",
+  捷克: "Czech Republic",
+  丹麦: "Denmark",
+  英格兰: "England",
+  爱沙尼亚: "Estonia",
+  法罗群岛: "Faroe Islands",
+  芬兰: "Finland",
+  法国: "France",
+  格鲁吉亚: "Georgia",
+  德国: "Germany",
+  希腊: "Greece",
+  匈牙利: "Hungary",
+  冰岛: "Iceland",
+  以色列: "Israel",
+  意大利: "Italy",
+  拉脱维亚: "Latvia",
+  列支敦士登: "Liechtenstein",
+  立陶宛: "Lithuania",
+  卢森堡: "Luxembourg",
+  北马其顿: "North Macedonia",
+  马耳他: "Malta",
+  摩尔多瓦: "Moldova",
+  荷兰: "Netherlands",
+  北爱尔兰: "Northern Ireland",
+  挪威: "Norway",
+  波兰: "Poland",
+  葡萄牙: "Portugal",
+  爱尔兰: "Ireland",
+  罗马尼亚: "Romania",
+  俄罗斯: "Russia",
+  圣马力诺: "San Marino",
+  苏格兰: "Scotland",
+  斯洛伐克: "Slovakia",
+  斯洛文尼亚: "Slovenia",
+  西班牙: "Spain",
+  瑞典: "Sweden",
+  瑞士: "Switzerland",
+  土耳其: "Turkey",
+  乌克兰: "Ukraine",
+  威尔士: "Wales",
+  塞尔维亚: "Serbia",
+  澳大利亚: "Australia",
+  库克群岛: "Cook Islands",
+  斐济: "Fiji",
+  新西兰: "New Zealand",
+  巴布亚新几内亚: "Papua New Guinea",
+  所罗门群岛: "Solomon Islands",
+  塔希提: "Tahiti",
+  汤加: "Tonga",
+  瓦努阿图: "Vanuatu",
+  萨摩亚: "Samoa",
+  阿根廷: "Argentina",
+  玻利维亚: "Bolivia",
+  巴西: "Brazil",
+  智利: "Chile",
+  哥伦比亚: "Colombia",
+  厄瓜多尔: "Ecuador",
+  巴拉圭: "Paraguay",
+  秘鲁: "Peru",
+  乌拉圭: "Uruguay",
+  委内瑞拉: "Venezuela",
+  巴勒斯坦: "Palestine",
+  美属萨摩亚: "American Samoa",
+  蒙古: "Mongolia",
+  关岛: "Guam",
+  厄立特里亚: "Eritrea",
+  安圭拉: "Anguilla",
+  英属维尔京群岛: "British Virgin Islands",
+  蒙特塞拉特: "Montserrat",
+  美属维尔京群岛: "US Virgin Islands",
+  特克斯和凯科斯群岛: "Turks and Caicos Islands",
+  新喀里多尼亚: "New Caledonia",
+  不丹: "Bhutan",
+  多米尼加: "Dominican Republic",
+  科摩罗: "Comoros",
+  东帝汶: "East Timor",
+  黑山: "Montenegro",
+};
+
+export function attributeLabel(key: string, locale: Locale): string {
+  if (locale === "en") return ATTRIBUTE_LABELS_EN[key] ?? key;
+  return ATTRIBUTE_LABELS[key] ?? key;
+}
+
+export function personalityLabel(key: string, locale: Locale): string {
+  return locale === "en"
+    ? (PERSONALITY_LABELS_EN[key] ?? key)
+    : (PERSONALITY_LABELS_ZH[key] ?? key);
+}
+
+export function severityLabel(value: number, locale: Locale): string | null {
+  return SEVERITY_LABELS[locale][value] ?? null;
+}
+
+export function roleName(
+  id: string | null | undefined,
+  fallback: string | null | undefined,
+  locale: Locale,
+): string | null {
+  if (locale === "en" && id) return ROLE_NAMES_EN[id] ?? fallback ?? id;
+  return fallback ?? (id ? (ROLE_NAMES_EN[id] ?? id) : null);
+}
+
+export function roleGroup(group: string, locale: Locale): string {
+  if (locale === "en") return ROLE_GROUPS_EN[group] ?? group;
+  return group;
+}
+
+export function traitLabel(
+  bit: number,
+  fallback: string | null | undefined,
+  locale: Locale,
+): string {
+  if (locale === "zh-CN") return TRAIT_LABELS_ZH[bit] ?? fallback ?? `#${bit}`;
+  return fallback ?? `#${bit}`;
+}
+
+export function nationLabel(name: string | null | undefined, locale: Locale): string | null {
+  if (name == null) return null;
+  if (locale === "en") return NATION_NAMES_EN[name] ?? name;
+  return name;
+}
+
+/** Position groups and other domain band labels returned by the Rust query layer. */
+export function bandLabel(label: string, locale: Locale): string {
+  if (locale === "en") return BAND_LABELS_EN[label] ?? label;
+  return label;
+}
+
+export function genderLabel(gender: number | null | undefined, locale: Locale): string {
+  if (gender === 1) return locale === "en" ? "Women" : "女子";
+  if (gender === 0) return locale === "en" ? "Men" : "男子";
+  return locale === "en" ? "Unknown" : "未知";
+}
+
+export function footLabel(left: number, right: number, locale: Locale): string {
+  return locale === "en" ? `${left}/${right} foot` : `${left}/${right} 脚`;
+}
+
+export function ageLabel(age: number | null | undefined, locale: Locale): string {
+  const value = age ?? "?";
+  return locale === "en" ? `${value} yrs` : `${value} 岁`;
+}
+
+export function playersLabel(count: number, locale: Locale): string {
+  return locale === "en" ? `${count} players` : `${count} 名球员`;
+}

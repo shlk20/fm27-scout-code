@@ -13,7 +13,14 @@ import { HelpDialog } from "./components/HelpDialog";
 import { ParseOverlay } from "./components/ParseOverlay";
 import { Toasts } from "./components/Toasts";
 import { useOpenSave } from "./lib/openSave";
-import { listenMenuAction, listenOpenFile, logMessage, takePendingOpen } from "./lib/api";
+import {
+  listenMenuAction,
+  listenOpenFile,
+  logMessage,
+  setAppLanguage,
+  takePendingOpen,
+} from "./lib/api";
+import { useI18n } from "./lib/useI18n";
 import { useAppStore } from "./store/app";
 
 export default function App() {
@@ -37,7 +44,13 @@ export default function App() {
   const setHiddenEnabled = useAppStore((state) => state.setHiddenEnabled);
   const pushToast = useAppStore((state) => state.pushToast);
   const { chooseAndOpen, openPath } = useOpenSave();
+  const { t, locale } = useI18n();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    void setAppLanguage(locale);
+  }, [locale]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -161,8 +174,8 @@ export default function App() {
           setHiddenEnabled(next);
           if (next) {
             pushToast({
-              title: "隐藏属性已开启",
-              description: "仅限单机使用，线上联赛可能被视为作弊。",
+              title: t("toast.hiddenOn.title"),
+              description: t("toast.hiddenOn.description"),
               tone: "default",
             });
           }
@@ -185,6 +198,7 @@ export default function App() {
   }, [
     chooseAndOpen,
     pushToast,
+    t,
     setAnalysisOpen,
     setCompareOpen,
     setExportOpen,

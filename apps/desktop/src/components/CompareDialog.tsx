@@ -2,16 +2,15 @@ import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { GitCompareArrows, X } from "lucide-react";
 import { getPlayer } from "@/lib/api";
-import {
-  ATTRIBUTE_GROUPS,
-  ATTRIBUTE_LABELS,
-  type Player,
-} from "@/lib/types";
+import { ATTRIBUTE_GROUPS, type Player } from "@/lib/types";
+import { attributeLabel } from "@/lib/labels";
+import { useI18n } from "@/lib/useI18n";
 import { caTone, cn, formatValue } from "@/lib/utils";
 import { useAppStore } from "@/store/app";
 import { Badge, Button, Modal } from "./ui";
 
 export function CompareDialog() {
+  const { t, locale } = useI18n();
   const open = useAppStore((state) => state.compareOpen);
   const setOpen = useAppStore((state) => state.setCompareOpen);
   const compareUids = useAppStore((state) => state.compareUids);
@@ -51,18 +50,18 @@ export function CompareDialog() {
       title={
         <span className="inline-flex items-center gap-2">
           <GitCompareArrows size={16} className="text-[var(--gold)]" />
-          球员对比
+          {t("compare.title")}
         </span>
       }
-      description={`${players.length} 名球员 · 最优值高亮 · 最多 4 人`}
+      description={t("compare.description", { count: players.length })}
       width="max-w-[1040px]"
       footer={
         <>
           <Button variant="ghost" size="sm" onClick={clearCompare}>
-            清空
+            {t("compare.clear")}
           </Button>
           <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
-            关闭
+            {t("compare.close")}
           </Button>
         </>
       }
@@ -76,7 +75,7 @@ export function CompareDialog() {
               onChange={(event) => setDifferencesOnly(event.target.checked)}
               className="accent-[var(--accent)]"
             />
-            只看差异
+            {t("compare.differencesOnly")}
           </label>
           {hiddenEnabled && (
             <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-[var(--muted)]">
@@ -86,11 +85,13 @@ export function CompareDialog() {
                 onChange={(event) => setHiddenOnly(event.target.checked)}
                 className="accent-[var(--accent)]"
               />
-              只看隐藏属性
+              {t("compare.hiddenOnly")}
             </label>
           )}
           <span className="ml-auto text-[10px] text-[var(--muted)]">
-            {displayMode === "display" ? "显示值 1–20" : "原始值 1–100"}
+            {displayMode === "display"
+              ? t("compare.displayValues")
+              : t("compare.rawValues")}
           </span>
         </div>
 
@@ -108,7 +109,7 @@ export function CompareDialog() {
                 type="button"
                 onClick={() => toggleCompare(player.uid)}
                 className="absolute right-1.5 top-1.5 rounded p-0.5 text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--danger)]"
-                aria-label="移除对比"
+                aria-label={t("compare.remove")}
               >
                 <X size={11} />
               </button>
@@ -116,7 +117,7 @@ export function CompareDialog() {
                 {player.name}
               </div>
               <div className="mt-0.5 truncate text-[10px] text-[var(--muted)]">
-                {player.club_name ?? "自由球员"}
+                {player.club_name ?? t("common.freeAgent")}
               </div>
               <div className="mt-2 flex items-center gap-1">
                 <span className={cn("rounded border px-1.5 py-0.5 font-mono text-[10px] font-bold", caTone(player.ca))}>
@@ -127,7 +128,8 @@ export function CompareDialog() {
                 </span>
               </div>
               <div className="mt-1.5 text-[9px] text-[var(--muted)]">
-                {player.age} 岁 · {player.natural_positions.join(" / ")} · {formatValue(player.transfer_value)}
+                {t("common.yearsOld", { age: player.age ?? "?" })} ·{" "}
+                {player.natural_positions.join(" / ")} · {formatValue(player.transfer_value)}
               </div>
             </div>
           ))}
@@ -145,9 +147,9 @@ export function CompareDialog() {
               .filter((row) => !differencesOnly || row.differs);
             if (rows.length === 0) return null;
             return (
-              <div key={group.label}>
+              <div key={group.labelKey}>
                 <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  {group.label}
+                  {t(`attribute.group.${group.labelKey}`)}
                 </div>
                 <div
                   className="grid gap-1"
@@ -156,7 +158,7 @@ export function CompareDialog() {
                   {rows.map((row) => (
                     <div key={row.key} className="contents">
                       <div className="flex items-center rounded-[6px] bg-[var(--surface-2)] px-2 py-1 text-[10px] text-[var(--muted)]">
-                        {ATTRIBUTE_LABELS[row.key] ?? row.key}
+                        {attributeLabel(row.key, locale)}
                       </div>
                       {row.rowValues.map((value, index) => (
                         <div
@@ -170,7 +172,9 @@ export function CompareDialog() {
                         >
                           {value > 0 ? value : "—"}
                           {value === row.best && value > 0 && (
-                            <span className="ml-1 text-[8px] uppercase opacity-60">best</span>
+                            <span className="ml-1 text-[8px] uppercase opacity-60">
+                              {t("compare.best")}
+                            </span>
                           )}
                         </div>
                       ))}
@@ -184,7 +188,7 @@ export function CompareDialog() {
 
         {players.length < 2 && (
           <div className="mt-4 rounded-xl border border-dashed border-[var(--line)] px-4 py-8 text-center text-[11px] text-[var(--muted)]">
-            在表格左侧勾选至少 2 名球员，再打开对比。
+            {t("compare.empty")}
           </div>
         )}
       </div>

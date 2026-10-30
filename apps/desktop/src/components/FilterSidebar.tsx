@@ -9,7 +9,9 @@ import {
   X,
 } from "lucide-react";
 import { useFilterOptions } from "@/lib/query";
-import { ATTRIBUTE_LABELS, POSITION_LABELS, POSITION_KEYS } from "@/lib/types";
+import { ATTRIBUTE_LABELS, POSITION_LABELS } from "@/lib/types";
+import { attributeLabel, nationLabel } from "@/lib/labels";
+import { useI18n } from "@/lib/useI18n";
 import { cn } from "@/lib/utils";
 import { EMPTY_FILTERS, useAppStore, type Filters } from "@/store/app";
 import { Badge, Button, Checkbox, Input, Label, Select, Switch } from "./ui";
@@ -34,6 +36,7 @@ const HIDDEN_ATTRIBUTES = new Set([
 ]);
 
 export function FilterSidebar() {
+  const { t, locale } = useI18n();
   const filters = useAppStore((state) => state.filters);
   const patchFilters = useAppStore((state) => state.patchFilters);
   const resetFilters = useAppStore((state) => state.resetFilters);
@@ -82,40 +85,65 @@ export function FilterSidebar() {
     return count;
   }, [filters]);
 
+  const nationOptions = useMemo(
+    () =>
+      (options?.nations ?? []).map((option) => ({
+        ...option,
+        name: nationLabel(option.name, locale) ?? option.name,
+      })),
+    [locale, options?.nations],
+  );
+
   const attributeOptions = useMemo(
     () =>
-      Object.entries(ATTRIBUTE_LABELS)
-        .filter(([key]) => hiddenEnabled || !HIDDEN_ATTRIBUTES.has(key))
-        .sort((a, b) => a[1].localeCompare(b[1], "zh-CN")),
-    [hiddenEnabled],
+      Object.keys(ATTRIBUTE_LABELS)
+        .filter((key) => hiddenEnabled || !HIDDEN_ATTRIBUTES.has(key))
+        .map((key) => [key, attributeLabel(key, locale)] as const)
+        .sort((a, b) => a[1].localeCompare(b[1], locale)),
+    [hiddenEnabled, locale],
   );
 
   const presets = useMemo(() => {
     const gameDate = summary?.game_date ?? "2026-07-13";
-    const options: { label: string; patch: Partial<Filters> }[] = [
-      { label: "全部", patch: {} },
-      { label: "小妖", patch: { ageMax: 21, paMin: 140, paCaGapMin: 10 } },
+    const options: {
+      id: "all" | "wonderkid" | "contractYear" | "highPotential";
+      label: string;
+      patch: Partial<Filters>;
+    }[] = [
+      { id: "all", label: t("filter.preset.all"), patch: {} },
       {
-        label: "合同年",
+        id: "wonderkid",
+        label: t("filter.preset.wonderkid"),
+        patch: { ageMax: 21, paMin: 140, paCaGapMin: 10 },
+      },
+      {
+        id: "contractYear",
+        label: t("filter.preset.contractYear"),
         patch: {
           contractEndAfter: gameDate,
           contractEndBefore: nextYear(gameDate),
         },
       },
-      { label: "高潜", patch: { caMin: 140, paMin: 160, ageMax: 23 } },
+      {
+        id: "highPotential",
+        label: t("filter.preset.highPotential"),
+        patch: { caMin: 140, paMin: 160, ageMax: 23 },
+      },
     ];
     return options.map((option) => ({
       ...option,
       active: matchesFilters(filters, option.patch),
     }));
-  }, [filters, summary?.game_date]);
+  }, [filters, summary?.game_date, t]);
 
   return (
     <aside className="flex h-full w-[252px] shrink-0 flex-col border-r border-[var(--line)] bg-[var(--surface)]/80">
       <div className="flex items-center justify-between border-b border-[var(--line)] px-3 py-2.5">
         <div className="flex items-center gap-2">
           <Filter size={14} className="text-[var(--accent)]" />
-          <span className="text-xs font-semibold tracking-wide text-[var(--ink)]">筛选</span>
+          <span className="text-xs font-semibold tracking-wide text-[var(--ink)]">
+            {t("filter.title")}
+          </span>
           {activeCount > 0 && (
             <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold text-white">
               {activeCount}
@@ -130,19 +158,19 @@ export function FilterSidebar() {
           className="h-6 px-1.5 text-[10px]"
         >
           <RotateCcw size={11} />
-          重置
+          {t("filter.reset")}
         </Button>
       </div>
 
       <div className="thin-scroll flex-1 space-y-5 overflow-y-auto px-3 py-3.5">
         <section className="grid grid-cols-2 gap-1">
-          {presets.map(({ label, patch, active }) => (
+          {presets.map(({ id, label, patch, active }) => (
             <button
-              key={label}
+              key={id}
               type="button"
               onClick={() => {
                 resetFilters();
-                if (label !== "全部") patchFilters(patch);
+                if (id !== "all") patchFilters(patch);
               }}
               className={
                 active
@@ -157,16 +185,16 @@ export function FilterSidebar() {
 
         <section className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label>我的视图</Label>
+            <Label>{t("filter.myViews")}</Label>
             <button
               type="button"
               onClick={() => {
-                setViewNameDraft(`视图 ${savedViews.length + 1}`);
+                setViewNameDraft(t("filter.viewDefaultName", { count: savedViews.length + 1 }));
                 setSavingView(true);
               }}
               className="rounded px-1 text-[10px] font-medium text-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
             >
-              + 保存
+              {t("filter.saveView")}
             </button>
           </div>
           {savingView && (
@@ -183,7 +211,7 @@ export function FilterSidebar() {
                   }
                   if (event.key === "Escape") setSavingView(false);
                 }}
-                placeholder="视图名称"
+                placeholder={t("filter.viewNamePlaceholder")}
                 className="h-6 flex-1 text-[10px]"
               />
               <Button
@@ -197,13 +225,13 @@ export function FilterSidebar() {
                   }
                 }}
               >
-                保存
+                {t("common.save")}
               </Button>
             </div>
           )}
           {savedViews.length === 0 ? (
             <div className="rounded-[6px] border border-dashed border-[var(--line)] px-2 py-1.5 text-[9px] text-[var(--muted)]">
-              保存常用筛选条件，下次一键恢复
+              {t("filter.noViews")}
             </div>
           ) : (
             <div className="space-y-1">
@@ -223,7 +251,7 @@ export function FilterSidebar() {
                     type="button"
                     onClick={() => deleteView(view.id)}
                     className="rounded px-0.5 text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--danger)]"
-                    aria-label={`删除视图 ${view.name}`}
+                    aria-label={t("filter.deleteView", { name: view.name })}
                   >
                     <X size={10} />
                   </button>
@@ -234,32 +262,32 @@ export function FilterSidebar() {
         </section>
 
         <section className="space-y-1.5">
-          <Label>俱乐部</Label>
+          <Label>{t("filter.club")}</Label>
           <MultiSelect
             options={options?.clubs ?? []}
             selected={filters.clubUids}
             onChange={(clubUids) => patchFilters({ clubUids })}
-            placeholder="全部俱乐部"
+            placeholder={t("filter.allClubs")}
           />
         </section>
 
         <section className="space-y-1.5">
-          <Label>国籍</Label>
+          <Label>{t("filter.nation")}</Label>
           <MultiSelect
-            options={options?.nations ?? []}
+            options={nationOptions}
             selected={filters.nationIds}
             onChange={(nationIds) => patchFilters({ nationIds })}
-            placeholder="全部国籍"
+            placeholder={t("filter.allNations")}
             maxLabel={2}
           />
         </section>
 
-        <Section title="性别与状态" icon={<SlidersHorizontal size={12} />}>
+        <Section title={t("filter.genderStatus")} icon={<SlidersHorizontal size={12} />}>
           <div className="grid grid-cols-2 gap-1">
             {[
-              { ids: [] as number[], label: "全部" },
-              { ids: [0], label: "男子" },
-              { ids: [1], label: "女子" },
+              { ids: [] as number[], label: t("filter.allGenders") },
+              { ids: [0], label: t("filter.men") },
+              { ids: [1], label: t("filter.women") },
             ].map((option) => {
               const active =
                 option.ids.length === 0
@@ -294,18 +322,18 @@ export function FilterSidebar() {
               onClick={() => patchFilters({ genders: [] })}
               className="rounded-[6px] border border-dashed border-[var(--line)] px-2 py-1.5 text-[10px] text-[var(--muted)] hover:text-[var(--ink)]"
             >
-              清除性别
+              {t("filter.clearGender")}
             </button>
           </div>
           <div className="grid grid-cols-2 gap-1">
             {[
-              ["", "全部状态"],
-              ["injured", "伤病中"],
-              ["injury_history", "伤病史"],
-              ["suspended", "停赛"],
-              ["loan", "租借"],
-              ["free", "自由球员"],
-              ["available", "可出战"],
+              ["", t("filter.allStatuses")],
+              ["injured", t("filter.status.injured")],
+              ["injury_history", t("filter.status.injuryHistory")],
+              ["suspended", t("filter.status.suspended")],
+              ["loan", t("filter.status.loan")],
+              ["free", t("filter.status.free")],
+              ["available", t("filter.status.available")],
             ].map(([value, label]) => {
               const active = (filters.availability ?? "") === value;
               const statusId = {
@@ -343,9 +371,9 @@ export function FilterSidebar() {
           </div>
         </Section>
 
-        <Section title="年龄与能力" icon={<SlidersHorizontal size={12} />}>
+        <Section title={t("filter.ageAbility")} icon={<SlidersHorizontal size={12} />}>
           <RangeInput
-            label="年龄"
+            label={t("filter.age")}
             min={filters.ageMin}
             max={filters.ageMax}
             onMin={(ageMin) => patchFilters({ ageMin })}
@@ -372,7 +400,7 @@ export function FilterSidebar() {
             placeholderMax="200"
           />
           <div className="flex items-center justify-between gap-2">
-            <Label>PA - CA 差距 ≥</Label>
+            <Label>{t("filter.paCaGap")}</Label>
             <Input
               type="number"
               min={0}
@@ -390,11 +418,11 @@ export function FilterSidebar() {
           <Checkbox
             checked={filters.paUnknown === true}
             onChange={(checked) => patchFilters({ paUnknown: checked ? true : null })}
-            label="只看 PA 未知 / 随机"
+            label={t("filter.paUnknown")}
           />
         </Section>
 
-        <Section title="位置" icon={<CircleHelp size={12} />}>
+        <Section title={t("filter.positions")} icon={<CircleHelp size={12} />}>
           <div className="grid grid-cols-3 gap-1">
             {POSITION_ROWS.flat().map((position, index) =>
               position ? (
@@ -417,7 +445,7 @@ export function FilterSidebar() {
             )}
           </div>
           <div className="flex items-center justify-between text-[10px] text-[var(--muted)]">
-            <span>最低评分</span>
+            <span>{t("filter.minRating")}</span>
             <div className="flex items-center gap-1.5">
               <input
                 type="range"
@@ -436,7 +464,7 @@ export function FilterSidebar() {
           </div>
         </Section>
 
-        <Section title="属性规则" icon={<Plus size={12} />}>
+        <Section title={t("filter.attributeRules")} icon={<Plus size={12} />}>
           <Select
             value=""
             onChange={(event) => {
@@ -444,7 +472,7 @@ export function FilterSidebar() {
             }}
             className="h-7 text-[11px]"
           >
-            <option value="">添加属性条件…</option>
+            <option value="">{t("filter.addAttribute")}</option>
             {attributeOptions.map(([key, label]) => (
               <option key={key} value={key}>
                 {label}
@@ -459,13 +487,13 @@ export function FilterSidebar() {
               >
                 <div className="mb-1.5 flex items-center justify-between">
                   <span className="text-[11px] font-medium text-[var(--ink)]">
-                    {ATTRIBUTE_LABELS[rule.key] ?? rule.key}
+                    {attributeLabel(rule.key, locale)}
                   </span>
                   <button
                     type="button"
                     onClick={() => removeAttribute(rule.id)}
                     className="rounded p-0.5 text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--danger)]"
-                    aria-label="移除属性条件"
+                    aria-label={t("filter.removeAttribute")}
                   >
                     <X size={11} />
                   </button>
@@ -475,7 +503,7 @@ export function FilterSidebar() {
                     type="number"
                     min={1}
                     max={20}
-                    placeholder="最小"
+                    placeholder={t("common.min")}
                     value={rule.min ?? ""}
                     onChange={(event) =>
                       updateAttribute(rule.id, {
@@ -489,7 +517,7 @@ export function FilterSidebar() {
                     type="number"
                     min={1}
                     max={20}
-                    placeholder="最大"
+                    placeholder={t("common.max")}
                     value={rule.max ?? ""}
                     onChange={(event) =>
                       updateAttribute(rule.id, {
@@ -504,9 +532,9 @@ export function FilterSidebar() {
           </div>
         </Section>
 
-        <Section title="合同与身价" icon={<ChevronDown size={12} />}>
+        <Section title={t("filter.contractValue")} icon={<ChevronDown size={12} />}>
           <RangeInput
-            label="身价（存档单位）"
+            label={t("filter.value")}
             min={filters.valueMin}
             max={filters.valueMax}
             onMin={(valueMin) => patchFilters({ valueMin })}
@@ -516,7 +544,7 @@ export function FilterSidebar() {
             placeholderMax="∞"
           />
           <RangeInput
-            label="周薪（存档单位）"
+            label={t("filter.wage")}
             min={filters.wageMin}
             max={filters.wageMax}
             onMin={(wageMin) => patchFilters({ wageMin })}
@@ -527,7 +555,7 @@ export function FilterSidebar() {
           />
           <div className="grid grid-cols-2 gap-1.5">
             <div className="space-y-1">
-              <Label>到期早于</Label>
+              <Label>{t("filter.expiresBefore")}</Label>
               <input
                 type="date"
                 value={filters.contractEndBefore ?? ""}
@@ -538,7 +566,7 @@ export function FilterSidebar() {
               />
             </div>
             <div className="space-y-1">
-              <Label>到期晚于</Label>
+              <Label>{t("filter.expiresAfter")}</Label>
               <input
                 type="date"
                 value={filters.contractEndAfter ?? ""}
@@ -550,7 +578,7 @@ export function FilterSidebar() {
             </div>
           </div>
           <div className="space-y-1">
-            <Label>租借状态</Label>
+            <Label>{t("filter.loanStatus")}</Label>
             <Select
               value={filters.onLoan == null ? "" : filters.onLoan ? "yes" : "no"}
               onChange={(event) =>
@@ -561,9 +589,9 @@ export function FilterSidebar() {
               }
               className="h-7 text-[11px]"
             >
-              <option value="">全部</option>
-              <option value="yes">仅租借</option>
-              <option value="no">非租借</option>
+              <option value="">{t("common.all")}</option>
+              <option value="yes">{t("filter.loanOnly")}</option>
+              <option value="no">{t("filter.notOnLoan")}</option>
             </Select>
           </div>
         </Section>
@@ -572,9 +600,11 @@ export function FilterSidebar() {
       <div className="border-t border-[var(--line)] px-3 py-3">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="text-[11px] font-semibold text-[var(--ink)]">隐藏属性</div>
+            <div className="text-[11px] font-semibold text-[var(--ink)]">
+              {t("filter.hiddenAttributes")}
+            </div>
             <div className="mt-0.5 text-[10px] leading-snug text-[var(--muted)]">
-              仅限单机分析，线上联赛可能视为作弊
+              {t("filter.hiddenWarning")}
             </div>
           </div>
           <Switch
@@ -585,19 +615,19 @@ export function FilterSidebar() {
                 return;
               }
               pushToast({
-                title: "已开启隐藏属性",
-                description: "仅限单机使用。请勿在线上联赛中依赖这些信息。",
+                title: t("toast.hiddenOn.title"),
+                description: t("toast.hiddenOn.description"),
                 tone: "default",
               });
               setHiddenEnabled(true);
             }}
-            label="隐藏属性"
+            label={t("filter.hiddenAttributes")}
           />
         </div>
         {hiddenEnabled && (
           <div className="mt-2 flex items-center gap-1.5">
-            <Badge tone="danger">仅单机</Badge>
-            <span className="text-[10px] text-[var(--muted)]">隐藏属性筛选已启用</span>
+            <Badge tone="danger">{t("filter.soloOnly")}</Badge>
+            <span className="text-[10px] text-[var(--muted)]">{t("filter.hiddenEnabled")}</span>
           </div>
         )}
       </div>

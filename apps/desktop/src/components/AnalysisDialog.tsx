@@ -19,6 +19,9 @@ import {
   useSquadAnalysis,
 } from "@/lib/query";
 import type { AnalysisOverview, DistributionBand, SquadAnalysis } from "@/lib/types";
+import { bandLabel } from "@/lib/labels";
+import { formatNumber } from "@/lib/i18n";
+import { useI18n } from "@/lib/useI18n";
 import { caTone, cn, formatValue, formatWage, initials } from "@/lib/utils";
 import { useAppStore } from "@/store/app";
 import { Badge, Button, Modal } from "./ui";
@@ -27,6 +30,7 @@ import { MultiSelect } from "./MultiSelect";
 type AnalysisTab = "overview" | "squad" | "wonderkids";
 
 export function AnalysisDialog() {
+  const { t, locale } = useI18n();
   const open = useAppStore((state) => state.analysisOpen);
   const setOpen = useAppStore((state) => state.setAnalysisOpen);
   const saveId = useAppStore((state) => state.saveId);
@@ -95,15 +99,17 @@ export function AnalysisDialog() {
       title={
         <span className="inline-flex items-center gap-2">
           <BarChart3 size={16} className="text-[var(--accent)]" />
-          分析中心
+          {t("analysis.title")}
         </span>
       }
-      description={`${summary?.save_name ?? "当前存档"} · ${summary?.game_date ?? "未知日期"}`}
+      description={`${summary?.save_name ?? t("analysis.currentSave")} · ${
+        summary?.game_date ?? t("common.unknownDate")
+      }`}
       width="max-w-[1080px]"
       footer={
         <>
           <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-            关闭
+            {t("analysis.close")}
           </Button>
           <Button
             variant="secondary"
@@ -115,16 +121,16 @@ export function AnalysisDialog() {
             }}
           >
             <RefreshCw size={13} />
-            刷新
+            {t("analysis.refresh")}
           </Button>
         </>
       }
     >
       <div className="flex gap-1 border-b border-[var(--line)] px-4 pt-3">
         {[
-          ["overview", "概览", <BarChart3 size={12} key="overview" />],
-          ["squad", "阵容深度", <Users size={12} key="squad" />],
-          ["wonderkids", "小妖雷达", <Sparkles size={12} key="wonderkids" />],
+          ["overview", t("analysis.tab.overview"), <BarChart3 size={12} key="overview" />],
+          ["squad", t("analysis.tab.squad"), <Users size={12} key="squad" />],
+          ["wonderkids", t("analysis.tab.wonderkids"), <Sparkles size={12} key="wonderkids" />],
         ].map(([value, label, icon]) => (
           <button
             key={value as string}
@@ -156,7 +162,7 @@ export function AnalysisDialog() {
               }}
             />
           ) : (
-            <div className="text-xs text-[var(--danger)]">无法读取分析数据。</div>
+            <div className="text-xs text-[var(--danger)]">{t("analysis.loadError")}</div>
           ))}
 
         {tab === "squad" && (
@@ -167,12 +173,14 @@ export function AnalysisDialog() {
                   options={options.data?.clubs ?? []}
                   selected={clubUid == null ? [] : [clubUid]}
                   onChange={(ids) => setClubUid(ids[0] ?? null)}
-                  placeholder="选择俱乐部"
+                  placeholder={t("analysis.chooseClub")}
                   maxLabel={1}
                 />
               </div>
               <span className="text-[10px] text-[var(--muted)]">
-                {clubName ? `${clubName} · 按 CA 排序` : "选择俱乐部查看阵容结构"}
+                {clubName
+                  ? t("analysis.sortedByCa", { club: clubName })
+                  : t("analysis.chooseClubHint")}
               </span>
             </div>
             {squad.isLoading ? (
@@ -187,9 +195,9 @@ export function AnalysisDialog() {
                 }}
               />
             ) : clubUid == null ? (
-              <EmptyHint text="先选择一家俱乐部。" />
+              <EmptyHint text={t("analysis.chooseFirst")} />
             ) : (
-              <EmptyHint text="这家俱乐部没有可用的阵容数据。" />
+              <EmptyHint text={t("analysis.noSquad")} />
             )}
           </div>
         )}
@@ -225,28 +233,49 @@ function OverviewPanel({
   data: AnalysisOverview;
   onClub: (clubUid: number) => void;
 }) {
+  const { t, locale } = useI18n();
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-2 lg:grid-cols-6">
-        <Stat icon={<Users size={13} />} label="球员" value={data.total_players.toLocaleString("en-US")} />
-        <Stat icon={<Shield size={13} />} label="俱乐部" value={data.total_clubs.toLocaleString("en-US")} />
-        <Stat icon={<CalendarClock size={13} />} label="平均年龄" value={data.average_age.toFixed(1)} />
-        <Stat icon={<TrendingUp size={13} />} label="CA 中位数" value={String(data.median_ca)} />
-        <Stat icon={<Coins size={13} />} label="总身价" value={formatValue(data.total_value)} />
+        <Stat
+          icon={<Users size={13} />}
+          label={t("analysis.players")}
+          value={formatNumber(data.total_players, locale)}
+        />
+        <Stat
+          icon={<Shield size={13} />}
+          label={t("analysis.clubs")}
+          value={formatNumber(data.total_clubs, locale)}
+        />
         <Stat
           icon={<CalendarClock size={13} />}
-          label="一年内到期"
-          value={data.expiring_contracts.toLocaleString("en-US")}
+          label={t("analysis.averageAge")}
+          value={data.average_age.toFixed(1)}
+        />
+        <Stat
+          icon={<TrendingUp size={13} />}
+          label={t("analysis.medianCa")}
+          value={String(data.median_ca)}
+        />
+        <Stat
+          icon={<Coins size={13} />}
+          label={t("analysis.totalValue")}
+          value={formatValue(data.total_value)}
+        />
+        <Stat
+          icon={<CalendarClock size={13} />}
+          label={t("analysis.expiringWithinYear")}
+          value={formatNumber(data.expiring_contracts, locale)}
         />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
-          <SectionTitle>年龄结构</SectionTitle>
+          <SectionTitle>{t("analysis.ageStructure")}</SectionTitle>
           <BandBars bands={data.age_bands} tone="accent" />
         </div>
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
-          <SectionTitle>CA 分布</SectionTitle>
+          <SectionTitle>{t("analysis.caDistribution")}</SectionTitle>
           <BandBars bands={data.ca_bands} tone="gold" />
         </div>
       </div>
@@ -254,20 +283,20 @@ function OverviewPanel({
       <div className="grid gap-3 lg:grid-cols-[1.6fr_1fr]">
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
           <div className="mb-2 flex items-center justify-between">
-            <SectionTitle>俱乐部实力榜</SectionTitle>
-            <Badge tone="outline">平均 CA</Badge>
+            <SectionTitle>{t("analysis.clubStrength")}</SectionTitle>
+            <Badge tone="outline">{t("analysis.averageCa")}</Badge>
           </div>
           <div className="thin-scroll max-h-[300px] overflow-auto">
             <table className="w-full text-left">
               <thead className="sticky top-0 bg-[var(--surface-2)]">
                 <tr className="text-[9px] uppercase tracking-wider text-[var(--muted)]">
                   <th className="py-1 pr-2">#</th>
-                  <th className="py-1">俱乐部</th>
-                  <th className="py-1 text-right">人数</th>
-                  <th className="py-1 text-right">平均 CA</th>
-                  <th className="py-1 text-right">最高 CA</th>
-                  <th className="py-1 text-right">平均年龄</th>
-                  <th className="py-1 text-right">身价</th>
+                  <th className="py-1">{t("analysis.table.club")}</th>
+                  <th className="py-1 text-right">{t("analysis.table.players")}</th>
+                  <th className="py-1 text-right">{t("analysis.averageCa")}</th>
+                  <th className="py-1 text-right">{t("analysis.table.maxCa")}</th>
+                  <th className="py-1 text-right">{t("analysis.averageAge")}</th>
+                  <th className="py-1 text-right">{t("analysis.table.value")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -299,15 +328,24 @@ function OverviewPanel({
 
         <div className="space-y-3">
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
-            <SectionTitle>合同到期年份</SectionTitle>
+            <SectionTitle>{t("analysis.contractYears")}</SectionTitle>
             <BandBars bands={data.contract_years} tone="blue" compact />
           </div>
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
-            <SectionTitle>状态</SectionTitle>
+            <SectionTitle>{t("analysis.status")}</SectionTitle>
             <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-              <MiniStat label="自由球员" value={data.free_agents.toLocaleString("en-US")} />
-              <MiniStat label="租借" value={data.loanees.toLocaleString("en-US")} />
-              <MiniStat label="一年内到期" value={data.expiring_contracts.toLocaleString("en-US")} />
+              <MiniStat
+                label={t("analysis.freeAgents")}
+                value={formatNumber(data.free_agents, locale)}
+              />
+              <MiniStat
+                label={t("analysis.loanees")}
+                value={formatNumber(data.loanees, locale)}
+              />
+              <MiniStat
+                label={t("analysis.expiringWithinYear")}
+                value={formatNumber(data.expiring_contracts, locale)}
+              />
             </div>
           </div>
         </div>
@@ -323,47 +361,74 @@ function SquadPanel({
   data: SquadAnalysis;
   onPlayer: (uid: number) => void;
 }) {
+  const { t, locale } = useI18n();
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2 lg:grid-cols-6">
-        <Stat icon={<Users size={13} />} label="阵容人数" value={String(data.player_count)} />
-        <Stat icon={<CalendarClock size={13} />} label="平均年龄" value={data.average_age.toFixed(1)} />
-        <Stat icon={<TrendingUp size={13} />} label="平均 CA" value={data.average_ca.toFixed(1)} />
-        <Stat icon={<TrendingUp size={13} />} label="平均 PA" value={data.average_pa.toFixed(1)} />
-        <Stat icon={<Coins size={13} />} label="周薪总额" value={formatWage(data.total_wage)} />
-        <Stat icon={<Coins size={13} />} label="总身价" value={formatValue(data.total_value)} />
+        <Stat
+          icon={<Users size={13} />}
+          label={t("analysis.squadSize")}
+          value={String(data.player_count)}
+        />
+        <Stat
+          icon={<CalendarClock size={13} />}
+          label={t("analysis.averageAge")}
+          value={data.average_age.toFixed(1)}
+        />
+        <Stat
+          icon={<TrendingUp size={13} />}
+          label={t("analysis.averageCa")}
+          value={data.average_ca.toFixed(1)}
+        />
+        <Stat
+          icon={<TrendingUp size={13} />}
+          label={t("analysis.averagePa")}
+          value={data.average_pa.toFixed(1)}
+        />
+        <Stat
+          icon={<Coins size={13} />}
+          label={t("analysis.totalWage")}
+          value={formatWage(data.total_wage, locale)}
+        />
+        <Stat
+          icon={<Coins size={13} />}
+          label={t("analysis.totalValue")}
+          value={formatValue(data.total_value)}
+        />
       </div>
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
-          <SectionTitle>位置深度</SectionTitle>
+          <SectionTitle>{t("analysis.positionDepth")}</SectionTitle>
           <BandBars bands={data.position_groups} tone="accent" compact />
         </div>
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
-          <SectionTitle>年龄结构</SectionTitle>
+          <SectionTitle>{t("analysis.ageStructure")}</SectionTitle>
           <BandBars bands={data.age_bands} tone="gold" compact />
         </div>
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
-          <SectionTitle>合同到期</SectionTitle>
+          <SectionTitle>{t("analysis.contractExpiry")}</SectionTitle>
           <BandBars bands={data.contract_years} tone="blue" compact />
         </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-[var(--line)]">
         <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-2)] px-3 py-2">
-          <SectionTitle>{data.club_name} 阵容</SectionTitle>
-          <span className="text-[9px] text-[var(--muted)]">{data.loanees} 人租借</span>
+          <SectionTitle>{t("analysis.clubSquad", { club: data.club_name })}</SectionTitle>
+          <span className="text-[9px] text-[var(--muted)]">
+            {t("analysis.loaneesCount", { count: data.loanees })}
+          </span>
         </div>
         <div className="thin-scroll max-h-[340px] overflow-auto">
           <table className="w-full text-left">
             <thead className="sticky top-0 z-10 bg-[var(--surface-2)] text-[9px] uppercase tracking-wider text-[var(--muted)]">
               <tr>
-                <th className="px-3 py-1.5">球员</th>
-                <th className="px-2 py-1.5 text-right">年龄</th>
-                <th className="px-2 py-1.5">位置</th>
+                <th className="px-3 py-1.5">{t("analysis.table.player")}</th>
+                <th className="px-2 py-1.5 text-right">{t("analysis.table.age")}</th>
+                <th className="px-2 py-1.5">{t("analysis.table.positions")}</th>
                 <th className="px-2 py-1.5 text-right">CA</th>
                 <th className="px-2 py-1.5 text-right">PA</th>
-                <th className="px-2 py-1.5 text-right">周薪</th>
-                <th className="px-3 py-1.5 text-right">合同</th>
+                <th className="px-2 py-1.5 text-right">{t("analysis.table.wage")}</th>
+                <th className="px-3 py-1.5 text-right">{t("analysis.table.contract")}</th>
               </tr>
             </thead>
             <tbody>
@@ -379,7 +444,7 @@ function SquadPanel({
                         {initials(player.name)}
                       </span>
                       <span className="max-w-[160px] truncate font-medium text-[var(--ink)]">
-                        {player.name ?? "未命名"}
+                        {player.name ?? t("common.unnamed")}
                       </span>
                     </div>
                   </td>
@@ -394,7 +459,7 @@ function SquadPanel({
                   </td>
                   <td className="px-2 py-1.5 text-right font-mono text-[var(--muted)]">{player.pa ?? "?"}</td>
                   <td className="px-2 py-1.5 text-right font-mono text-[var(--muted)]">
-                    {player.wage != null ? formatWage(player.wage) : "—"}
+                    {player.wage != null ? formatWage(player.wage, locale) : "—"}
                   </td>
                   <td className="px-3 py-1.5 text-right font-mono text-[var(--muted)]">
                     {player.contract_end ?? "—"}
@@ -434,16 +499,37 @@ function WonderkidPanel({
   onApply: () => void;
   onPlayer: (uid: number) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
-        <NumberField label="年龄 ≤" value={maxAge} min={15} max={30} onChange={onMaxAge} />
-        <NumberField label="PA ≥" value={minPa} min={80} max={200} onChange={onMinPa} />
-        <NumberField label="PA - CA ≥" value={minGap} min={0} max={80} onChange={onMinGap} />
+        <NumberField
+          label={t("analysis.wonderkidAge")}
+          value={maxAge}
+          min={15}
+          max={30}
+          onChange={onMaxAge}
+        />
+        <NumberField
+          label={t("analysis.wonderkidPa")}
+          value={minPa}
+          min={80}
+          max={200}
+          onChange={onMinPa}
+        />
+        <NumberField
+          label={t("analysis.wonderkidGap")}
+          value={minGap}
+          min={0}
+          max={80}
+          onChange={onMinGap}
+        />
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-[10px] text-[var(--muted)]">{total} 名匹配</span>
+          <span className="text-[10px] text-[var(--muted)]">
+            {t("analysis.matches", { count: total })}
+          </span>
           <Button variant="primary" size="sm" onClick={onApply}>
-            应用为筛选
+            {t("analysis.applyFilters")}
             <ArrowRight size={12} />
           </Button>
         </div>
@@ -451,20 +537,20 @@ function WonderkidPanel({
       {loading ? (
         <LoadingBlock />
       ) : rows.length === 0 ? (
-        <EmptyHint text="没有符合条件的小妖。放宽年龄或 PA 条件试试。" />
+        <EmptyHint text={t("analysis.noWonderkids")} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-[var(--line)]">
           <table className="w-full text-left">
             <thead className="bg-[var(--surface-2)] text-[9px] uppercase tracking-wider text-[var(--muted)]">
               <tr>
-                <th className="px-3 py-1.5">球员</th>
-                <th className="px-2 py-1.5">俱乐部</th>
-                <th className="px-2 py-1.5 text-right">年龄</th>
-                <th className="px-2 py-1.5">位置</th>
+                <th className="px-3 py-1.5">{t("analysis.table.player")}</th>
+                <th className="px-2 py-1.5">{t("analysis.table.club")}</th>
+                <th className="px-2 py-1.5 text-right">{t("analysis.table.age")}</th>
+                <th className="px-2 py-1.5">{t("analysis.table.positions")}</th>
                 <th className="px-2 py-1.5 text-right">CA</th>
                 <th className="px-2 py-1.5 text-right">PA</th>
-                <th className="px-2 py-1.5 text-right">差距</th>
-                <th className="px-3 py-1.5 text-right">身价</th>
+                <th className="px-2 py-1.5 text-right">{t("filter.paCaGap")}</th>
+                <th className="px-3 py-1.5 text-right">{t("analysis.table.value")}</th>
               </tr>
             </thead>
             <tbody>
@@ -475,7 +561,9 @@ function WonderkidPanel({
                   onClick={() => onPlayer(player.uid)}
                 >
                   <td className="px-3 py-1.5 font-medium text-[var(--ink)]">{player.name}</td>
-                  <td className="max-w-[160px] truncate px-2 py-1.5 text-[var(--muted)]">{player.club_name ?? "自由球员"}</td>
+                  <td className="max-w-[160px] truncate px-2 py-1.5 text-[var(--muted)]">
+                    {player.club_name ?? t("common.freeAgent")}
+                  </td>
                   <td className="px-2 py-1.5 text-right font-mono text-[var(--muted)]">{player.age ?? "—"}</td>
                   <td className="px-2 py-1.5 font-mono text-[var(--accent-strong)]">{player.positions_text}</td>
                   <td className="px-2 py-1.5 text-right font-mono">{player.ca}</td>
@@ -532,14 +620,19 @@ function BandBars({
   tone: "accent" | "gold" | "blue";
   compact?: boolean;
 }) {
+  const { t, locale } = useI18n();
   const max = Math.max(1, ...bands.map((band) => band.count));
   const color = tone === "gold" ? "bg-[var(--gold)]" : tone === "blue" ? "bg-[var(--blue)]" : "bg-[var(--accent)]";
   return (
     <div className={compact ? "mt-2 space-y-1" : "mt-2 space-y-1.5"}>
-      {bands.length === 0 && <div className="text-[10px] text-[var(--muted)]">暂无数据</div>}
+      {bands.length === 0 && (
+        <div className="text-[10px] text-[var(--muted)]">{t("analysis.noData")}</div>
+      )}
       {bands.map((band) => (
         <div key={band.label} className="flex items-center gap-2">
-          <span className="w-12 shrink-0 text-right font-mono text-[9px] text-[var(--muted)]">{band.label}</span>
+          <span className="w-12 shrink-0 text-right font-mono text-[9px] text-[var(--muted)]">
+            {bandLabel(band.label, locale)}
+          </span>
           <div className={cn("flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]", compact ? "h-1" : "h-1.5")}>
             <div className={cn("h-full rounded-full", color)} style={{ width: `${(band.count / max) * 100}%` }} />
           </div>
@@ -579,10 +672,11 @@ function NumberField({
 }
 
 function LoadingBlock() {
+  const { t } = useI18n();
   return (
     <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--line)] py-12 text-[11px] text-[var(--muted)]">
       <Loader2 size={14} className="animate-spin" />
-      正在汇总数据…
+      {t("analysis.loading")}
     </div>
   );
 }

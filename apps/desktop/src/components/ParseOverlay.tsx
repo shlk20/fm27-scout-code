@@ -1,15 +1,17 @@
 import { Loader2, ScanSearch } from "lucide-react";
+import type { TranslationKey } from "@/lib/i18n";
+import { useI18n } from "@/lib/useI18n";
 import { useAppStore } from "@/store/app";
 
-const STAGES: Record<string, string> = {
-  snapshot: "只读快照",
-  opening: "读取容器",
-  game_db: "解压 game_db",
-  names: "姓名池",
-  players: "扫描记录",
-  clubs: "俱乐部",
-  decode: "解码球员",
-  done: "完成",
+const STAGE_KEYS: Record<string, TranslationKey> = {
+  snapshot: "parse.stage.snapshot",
+  opening: "parse.stage.opening",
+  game_db: "parse.stage.game_db",
+  names: "parse.stage.names",
+  players: "parse.stage.players",
+  clubs: "parse.stage.clubs",
+  decode: "parse.stage.decode",
+  done: "parse.stage.done",
 };
 
 const STAGE_ORDER = ["snapshot", "opening", "game_db", "names", "players", "clubs", "decode"];
@@ -17,6 +19,7 @@ const STAGE_ORDER = ["snapshot", "opening", "game_db", "names", "players", "club
 export function ParseOverlay() {
   const parsing = useAppStore((state) => state.parsing);
   const progress = useAppStore((state) => state.parseProgress);
+  const { t } = useI18n();
   if (!parsing) return null;
   const total = progress?.total ?? 0;
   const current = progress?.current ?? 0;
@@ -33,9 +36,11 @@ export function ParseOverlay() {
             <Loader2 size={12} className="absolute -right-1 -top-1 animate-spin text-[var(--gold)]" />
           </div>
           <div>
-            <div className="text-sm font-semibold text-[var(--ink)]">正在解析存档</div>
+            <div className="text-sm font-semibold text-[var(--ink)]">{t("parse.title")}</div>
             <div className="mt-0.5 text-[10px] text-[var(--muted)]">
-              {progress?.message ?? "准备中…"}
+              {activeStage === "decode" && total > 0
+                ? t("parse.decoding", { current, total })
+                : t(STAGE_KEYS[activeStage] ?? "parse.preparing")}
             </div>
           </div>
         </div>
@@ -66,12 +71,12 @@ export function ParseOverlay() {
                     : "border-[var(--line)] text-[var(--muted)]"
               }`}
             >
-              {STAGES[stage]}
+              {t(STAGE_KEYS[stage] ?? "parse.preparing")}
             </span>
           ))}
         </div>
         <p className="mt-3 text-[9px] leading-relaxed text-[var(--muted)]">
-          只读取存档副本，不写入游戏目录。首次解析约 1–3 秒，之后会直接使用本地缓存。
+          {t("parse.note")}
         </p>
       </div>
     </div>

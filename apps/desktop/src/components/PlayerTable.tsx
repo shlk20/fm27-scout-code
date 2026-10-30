@@ -19,10 +19,13 @@ import {
   Users,
 } from "lucide-react";
 import { usePlayerPage } from "@/lib/query";
-import { ATTRIBUTE_LABELS, type PlayerRow } from "@/lib/types";
+import { type PlayerRow } from "@/lib/types";
+import { attributeLabel, nationLabel, roleName } from "@/lib/labels";
+import { formatNumber } from "@/lib/i18n";
+import { useI18n } from "@/lib/useI18n";
 import { caTone, cn, formatValue, formatWage, initials } from "@/lib/utils";
 import { useAppStore } from "@/store/app";
-import { Badge, Button, EmptyState } from "./ui";
+import { Button, EmptyState } from "./ui";
 
 const TECHNICAL_COLUMNS = ["passing", "dribbling", "finishing", "first_touch", "technique", "crossing"];
 const MENTAL_COLUMNS = ["vision", "decisions", "anticipation", "teamwork", "work_rate", "determination"];
@@ -34,6 +37,7 @@ const OVERVIEW_VISIBILITY: VisibilityState = Object.fromEntries(
 );
 
 export function PlayerTable() {
+  const { t, locale } = useI18n();
   const page = usePlayerPage();
   const sort = useAppStore((state) => state.sort);
   const setSort = useAppStore((state) => state.setSort);
@@ -68,7 +72,7 @@ export function PlayerTable() {
         cell: ({ row }) => (
           <button
             type="button"
-            aria-label="加入对比"
+            aria-label={t("table.addCompare")}
             onClick={(event) => {
               event.stopPropagation();
               toggleCompare(row.original.uid);
@@ -87,7 +91,7 @@ export function PlayerTable() {
       {
         id: "name",
         accessorFn: (row) => row.name,
-        header: "球员",
+        header: t("table.player"),
         size: 224,
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-2">
@@ -96,20 +100,20 @@ export function PlayerTable() {
             </div>
             <div className="min-w-0">
               <div className="truncate text-[12px] font-semibold leading-tight text-[var(--ink)]">
-                {row.original.name ?? "未命名球员"}
+                {row.original.name ?? t("common.unnamedPlayer")}
               </div>
               <div className="mt-0.5 flex items-center gap-1.5 text-[10px] leading-tight text-[var(--muted)]">
-                <span>{row.original.age ?? "?"} 岁</span>
+                <span>{t("common.yearsOld", { age: row.original.age ?? "?" })}</span>
                 <span className="text-[var(--line-strong)]">·</span>
                 <span className="truncate">
-                  {row.original.nation_name ??
+                  {nationLabel(row.original.nation_name, locale) ??
                     (row.original.nation_id != null
-                      ? `国家 #${row.original.nation_id}`
-                      : "国籍未知")}
+                      ? t("common.nationNumber", { id: row.original.nation_id })
+                      : t("common.unknownNation"))}
                 </span>
                 {row.original.gender === 1 && (
                   <span className="rounded bg-[var(--blue-soft)] px-1 text-[8px] font-semibold text-[var(--blue)]">
-                    女
+                    {t("table.female")}
                   </span>
                 )}
               </div>
@@ -120,16 +124,16 @@ export function PlayerTable() {
       {
         id: "club",
         accessorFn: (row) => row.club_name,
-        header: "俱乐部",
+        header: t("table.club"),
         size: 154,
         cell: ({ row }) => (
           <div className="min-w-0">
             <div className="truncate text-[11px] font-medium text-[var(--ink)]">
-              {row.original.club_name ?? "自由球员"}
+              {row.original.club_name ?? t("common.freeAgent")}
             </div>
             {row.original.on_loan && (
               <span className="mt-0.5 inline-flex items-center rounded-full bg-[var(--blue-soft)] px-1.5 py-px text-[9px] font-semibold text-[var(--blue)]">
-                租借
+                {t("table.onLoan")}
               </span>
             )}
           </div>
@@ -147,14 +151,14 @@ export function PlayerTable() {
                 : row.club_uid == null
                   ? "free"
                   : "available",
-        header: "状态",
+        header: t("table.status"),
         size: 66,
         cell: ({ row }) => <StatusBadges row={row.original} />,
       },
       {
         id: "positions",
         accessorFn: (row) => row.positions_text,
-        header: "位置",
+        header: t("table.positions"),
         size: 78,
         cell: ({ row }) => (
           <span className="font-mono text-[10px] font-semibold text-[var(--accent-strong)]">
@@ -165,12 +169,16 @@ export function PlayerTable() {
       {
         id: "role",
         accessorFn: (row) => row.best_role_score,
-        header: "最佳角色",
+        header: t("table.bestRole"),
         size: 116,
         cell: ({ row }) => (
           <div className="min-w-0">
             <div className="truncate text-[10px] font-medium text-[var(--ink)]">
-              {row.original.best_role_name ?? "—"}
+              {roleName(
+                row.original.best_role_id,
+                row.original.best_role_name,
+                locale,
+              ) ?? "—"}
             </div>
             <div className="text-[9px] text-[var(--muted)]">
               {row.original.best_role_score != null
@@ -210,7 +218,7 @@ export function PlayerTable() {
       {
         id: "value",
         accessorFn: (row) => row.transfer_value,
-        header: "身价",
+        header: t("table.value"),
         size: 76,
         cell: ({ row }) => (
           <span className="whitespace-nowrap font-mono text-[11px] tabular-nums text-[var(--ink)]">
@@ -221,18 +229,18 @@ export function PlayerTable() {
       {
         id: "wage",
         accessorFn: (row) => row.wage,
-        header: "周薪",
+        header: t("table.wage"),
         size: 82,
         cell: ({ row }) => (
           <span className="whitespace-nowrap font-mono text-[10px] tabular-nums text-[var(--muted)]">
-            {row.original.wage != null ? formatWage(row.original.wage) : "—"}
+            {row.original.wage != null ? formatWage(row.original.wage, locale) : "—"}
           </span>
         ),
       },
       {
         id: "contract",
         accessorFn: (row) => row.contract_end,
-        header: "合同到期",
+        header: t("table.contractEnd"),
         size: 80,
         cell: ({ row }) => (
           <span
@@ -250,7 +258,7 @@ export function PlayerTable() {
       {
         id: "height",
         accessorFn: (row) => row.height_cm,
-        header: "身高",
+        header: t("table.height"),
         size: 56,
         cell: ({ row }) => (
           <span className="font-mono text-[10px] text-[var(--muted)]">
@@ -261,7 +269,7 @@ export function PlayerTable() {
       {
         id: "foot",
         accessorFn: (row) => row.left_foot,
-        header: "脚",
+        header: t("table.foot"),
         size: 46,
         cell: ({ row }) => (
           <span className="font-mono text-[10px] text-[var(--muted)]">
@@ -274,7 +282,7 @@ export function PlayerTable() {
       ...ATTRIBUTE_TABLE_KEYS.map<ColumnDef<PlayerRow>>((key) => ({
         id: `attr_${key}`,
         accessorFn: (row) => row.attributes[key],
-        header: ATTRIBUTE_LABELS[key] ?? key,
+        header: attributeLabel(key, locale),
         size: 62,
         cell: ({ row }) => (
           <span className="font-mono text-[10px] font-semibold text-[var(--ink)]">
@@ -284,12 +292,12 @@ export function PlayerTable() {
       })),
       {
         id: "hidden",
-        header: "隐藏",
+        header: t("table.hidden"),
         size: 52,
         cell: ({ row }) =>
           hiddenEnabled && row.original.personality ? (
             <span className="font-mono text-[10px] font-semibold text-[var(--gold)]">
-              职 {row.original.personality.professionalism}
+              {t("table.professionalismShort")} {row.original.personality.professionalism}
             </span>
           ) : (
             <span className="text-[10px] text-[var(--line-strong)]">—</span>
@@ -301,7 +309,7 @@ export function PlayerTable() {
         ? { ...column, meta: { ...(column.meta ?? {}), sortable: true } }
         : column,
     );
-  }, [compareUids, hiddenEnabled, toggleCompare]);
+  }, [compareUids, hiddenEnabled, locale, t, toggleCompare]);
 
   const table = useReactTable({
     data: page.data?.rows ?? [],
@@ -340,14 +348,14 @@ export function PlayerTable() {
             {page.isFetching ? (
               <span className="inline-flex items-center gap-1.5 text-[var(--muted)]">
                 <Loader2 size={11} className="animate-spin" />
-                正在查询
+                {t("table.loading")}
               </span>
             ) : (
-              `${total.toLocaleString("en-US")} 名球员`
+              t("table.players", { count: formatNumber(total, locale) })
             )}
           </span>
           {page.isPlaceholderData && (
-            <span className="text-[10px] text-[var(--muted)]">更新中…</span>
+            <span className="text-[10px] text-[var(--muted)]">{t("table.updating")}</span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -359,20 +367,20 @@ export function PlayerTable() {
               onClick={() => setColumnsOpen((value) => !value)}
             >
               <Columns3 size={12} />
-              列
+              {t("table.columns")}
             </Button>
             {columnsOpen && (
               <div className="absolute right-0 top-7 z-30 w-44 rounded-[9px] border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-pop)]">
                 <div className="mb-1.5 grid grid-cols-2 gap-1 border-b border-[var(--line)] pb-1.5">
                   {[
-                    ["概览", null],
-                    ["技术", TECHNICAL_COLUMNS],
-                    ["精神", MENTAL_COLUMNS],
-                    ["身体", PHYSICAL_COLUMNS],
-                    ["门将", GOALKEEPING_COLUMNS],
-                  ].map(([label, keys]) => (
+                    ["overview", t("table.overview"), null],
+                    ["technical", t("table.technical"), TECHNICAL_COLUMNS],
+                    ["mental", t("table.mental"), MENTAL_COLUMNS],
+                    ["physical", t("table.physical"), PHYSICAL_COLUMNS],
+                    ["goalkeeping", t("table.goalkeeping"), GOALKEEPING_COLUMNS],
+                  ].map(([key, label, keys]) => (
                     <button
-                      key={label as string}
+                      key={key as string}
                       type="button"
                       onClick={() => {
                         const visibility: VisibilityState = {};
@@ -406,7 +414,7 @@ export function PlayerTable() {
                     >
                       <span>{String(column.columnDef.header)}</span>
                       <span className={column.getIsVisible() ? "text-[var(--accent)]" : "text-[var(--line-strong)]"}>
-                        {column.getIsVisible() ? "显示" : <EyeOff size={11} />}
+                        {column.getIsVisible() ? t("table.shown") : <EyeOff size={11} />}
                       </span>
                     </button>
                   ))}
@@ -416,7 +424,9 @@ export function PlayerTable() {
           </div>
           <div className="h-4 w-px bg-[var(--line)]" />
           <span className="text-[10px] text-[var(--muted)]">
-            {compareUids.length > 0 ? `已选 ${compareUids.length}/4 对比` : "勾选左侧加入对比"}
+            {compareUids.length > 0
+              ? t("table.compareSelected", { count: compareUids.length })
+              : t("table.compareHint")}
           </span>
         </div>
       </div>
@@ -427,8 +437,8 @@ export function PlayerTable() {
         ) : total === 0 ? (
           <EmptyState
             icon={<SearchX size={20} />}
-            title="没有匹配的球员"
-            description="尝试放宽筛选条件，或清空搜索。当前存档中的所有球员仍然保留在本地缓存中。"
+            title={t("table.emptyTitle")}
+            description={t("table.emptyDescription")}
           />
         ) : (
           <table className="w-full border-separate border-spacing-0 text-left" style={{ tableLayout: "fixed" }}>
@@ -450,7 +460,7 @@ export function PlayerTable() {
                         "relative",
                       )}
                       onClick={(event) => sortKey && setSort(sortKey, event.shiftKey)}
-                      title={sortKey ? "点击排序，Shift+点击加入多列排序" : undefined}
+                      title={sortKey ? t("table.sortHint") : undefined}
                     >
                       <span className="inline-flex items-center gap-1">
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -536,7 +546,7 @@ export function PlayerTable() {
       <div className="flex h-9 shrink-0 items-center justify-between border-t border-[var(--line)] bg-[var(--surface)] px-3">
         <div className="flex items-center gap-2 text-[10px] text-[var(--muted)]">
           <Users size={11} />
-          <span>服务端分页 · 每页 {pageSize}</span>
+          <span>{t("table.serverPagination", { size: pageSize })}</span>
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -545,7 +555,7 @@ export function PlayerTable() {
             className="h-6 w-6"
             disabled={currentPage <= 0}
             onClick={() => setPage(currentPage - 1)}
-            aria-label="上一页"
+            aria-label={t("table.prevPage")}
           >
             <ChevronLeft size={13} />
           </Button>
@@ -558,7 +568,7 @@ export function PlayerTable() {
             className="h-6 w-6"
             disabled={currentPage + 1 >= totalPages}
             onClick={() => setPage(currentPage + 1)}
-            aria-label="下一页"
+            aria-label={t("table.nextPage")}
           >
             <ChevronRight size={13} />
           </Button>
@@ -569,32 +579,38 @@ export function PlayerTable() {
 }
 
 function StatusBadges({ row }: { row: PlayerRow }) {
+  const { t } = useI18n();
   const badges: { label: string; tone: string; title?: string }[] = [];
   if (row.injury_status === "injured") {
     badges.push({
-      label: "伤",
+      label: t("table.injuredShort"),
       tone: "bg-[var(--danger-soft)] text-[var(--danger)]",
-      title: row.injury_until ? `预计 ${row.injury_until} 复出` : "伤病中",
+      title: row.injury_until
+        ? t("table.injuredUntil", { date: row.injury_until })
+        : t("table.injured"),
     });
   } else if (row.recent_injury) {
     badges.push({
-      label: "伤",
+      label: t("table.injuredShort"),
       tone: "bg-[var(--surface-3)] text-[var(--muted)]",
-      title: `最近伤病 ${row.recent_injury}`,
+      title: t("table.recentInjury", { date: row.recent_injury }),
     });
   }
   if (row.suspension_count > 0) {
     badges.push({
-      label: "停",
+      label: t("table.suspendedShort"),
       tone: "bg-[var(--gold-soft)] text-[var(--gold)]",
-      title: `${row.suspension_count} 项停赛`,
+      title: t(
+        row.suspension_count === 1 ? "table.suspensionOne" : "table.suspensions",
+        { count: row.suspension_count },
+      ),
     });
   }
   if (row.on_loan) {
     badges.push({
-      label: "租",
+      label: t("table.loanShort"),
       tone: "bg-[var(--blue-soft)] text-[var(--blue)]",
-      title: "租借中",
+      title: t("table.loanActive"),
     });
   }
   if (badges.length === 0) {

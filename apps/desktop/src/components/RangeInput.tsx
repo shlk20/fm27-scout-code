@@ -1,3 +1,4 @@
+import { useI18n } from "@/lib/useI18n";
 import { Input, Label } from "./ui";
 
 export function RangeInput({
@@ -7,8 +8,8 @@ export function RangeInput({
   onMin,
   onMax,
   step = 1,
-  placeholderMin = "最小",
-  placeholderMax = "最大",
+  placeholderMin,
+  placeholderMax,
 }: {
   label: string;
   min: number | null;
@@ -19,6 +20,7 @@ export function RangeInput({
   placeholderMin?: string;
   placeholderMax?: string;
 }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
@@ -28,7 +30,7 @@ export function RangeInput({
           inputMode="numeric"
           step={step}
           value={min ?? ""}
-          placeholder={placeholderMin}
+          placeholder={placeholderMin ?? t("common.min")}
           onChange={(event) =>
             onMin(event.target.value === "" ? null : Number(event.target.value))
           }
@@ -40,7 +42,7 @@ export function RangeInput({
           inputMode="numeric"
           step={step}
           value={max ?? ""}
-          placeholder={placeholderMax}
+          placeholder={placeholderMax ?? t("common.max")}
           onChange={(event) =>
             onMax(event.target.value === "" ? null : Number(event.target.value))
           }

@@ -3,12 +3,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Check, Download, FileJson, FileSpreadsheet, Loader2 } from "lucide-react";
 import { exportPlayers, pickExportFile } from "@/lib/api";
 import { buildPlayerQuery, usePlayerPage } from "@/lib/query";
+import { formatNumber } from "@/lib/i18n";
+import { useI18n } from "@/lib/useI18n";
 import { useAppStore, EMPTY_FILTERS } from "@/store/app";
 import { Button, Modal } from "./ui";
 
 type Scope = "filter" | "selected" | "all";
 
 export function ExportDialog() {
+  const { t, locale } = useI18n();
   const open = useAppStore((state) => state.exportOpen);
   const setOpen = useAppStore((state) => state.setExportOpen);
   const saveId = useAppStore((state) => state.saveId);
@@ -51,14 +54,17 @@ export function ExportDialog() {
     try {
       const report = await exportPlayers(base, format, path);
       pushToast({
-        title: "导出完成",
-        description: `${report.rows.toLocaleString("en-US")} 行已写入 ${report.path}`,
+        title: t("toast.exportDone"),
+        description: t("toast.exportDoneDescription", {
+          count: formatNumber(report.rows, locale),
+          path: report.path,
+        }),
         tone: "success",
       });
       await queryClient.invalidateQueries({ queryKey: ["players"] });
       setOpen(false);
     } catch (error) {
-      pushToast({ title: "导出失败", description: String(error), tone: "error" });
+      pushToast({ title: t("toast.exportFailed"), description: String(error), tone: "error" });
     } finally {
       setBusy(false);
     }
@@ -68,13 +74,13 @@ export function ExportDialog() {
     <Modal
       open={open}
       onClose={() => setOpen(false)}
-      title="导出球员"
-      description="导出当前筛选结果，或选中的 1–4 名球员"
+      title={t("export.title")}
+      description={t("export.description")}
       width="max-w-[520px]"
       footer={
         <>
           <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-            取消
+            {t("common.cancel")}
           </Button>
           <Button
             variant="primary"
@@ -83,7 +89,7 @@ export function ExportDialog() {
             disabled={busy || (scope === "selected" && selected.length === 0)}
           >
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-            导出
+            {t("toolbar.export")}
           </Button>
         </>
       }
@@ -91,12 +97,24 @@ export function ExportDialog() {
       <div className="space-y-4 p-5">
         <div className="space-y-2">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            范围
+            {t("export.scope")}
           </div>
           {[
-            ["filter", "当前筛选结果", `${page.data?.total?.toLocaleString("en-US") ?? 0} 名球员`],
-            ["selected", "选中 / 对比球员", selected.length ? `${selected.length} 名球员` : "尚未选择"],
-            ["all", "当前存档全部球员", "跳过所有筛选条件"],
+            [
+              "filter",
+              t("export.currentFilter"),
+              t("common.playersCount", {
+                count: formatNumber(page.data?.total ?? 0, locale),
+              }),
+            ],
+            [
+              "selected",
+              t("export.selected"),
+              selected.length
+                ? t("common.playersCount", { count: selected.length })
+                : t("export.notSelected"),
+            ],
+            ["all", t("export.all"), t("export.skipFilters")],
           ].map(([value, label, detail]) => (
             <button
               key={value}
@@ -120,7 +138,7 @@ export function ExportDialog() {
 
         <div className="space-y-2">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            格式
+            {t("export.format")}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -150,14 +168,14 @@ export function ExportDialog() {
               <FileJson size={18} className="text-[var(--gold)]" />
               <div>
                 <div className="text-[12px] font-semibold text-[var(--ink)]">JSON</div>
-                <div className="text-[9px] text-[var(--muted)]">完整表格字段</div>
+                <div className="text-[9px] text-[var(--muted)]">{t("export.jsonDetail")}</div>
               </div>
             </button>
           </div>
         </div>
 
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2 text-[10px] leading-relaxed text-[var(--muted)]">
-          CSV 包含表格字段与 52 项属性。导出文件写入你选择的位置；不会上传到任何服务器。
+          {t("export.note")}
         </div>
       </div>
     </Modal>

@@ -1,4 +1,5 @@
-import { ATTRIBUTE_LABELS } from "@/lib/types";
+import { attributeLabel } from "@/lib/labels";
+import { useI18n } from "@/lib/useI18n";
 
 export function AttributeRadar({
   values,
@@ -9,6 +10,7 @@ export function AttributeRadar({
   keys: string[];
   max: number;
 }) {
+  const { t, locale } = useI18n();
   const size = 176;
   const center = size / 2;
   const radius = 58;
@@ -23,7 +25,13 @@ export function AttributeRadar({
     .join(" ");
   return (
     <div className="flex items-center justify-center py-2">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="能力雷达图">
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        role="img"
+        aria-label={t("inspector.radarAria")}
+      >
         {[0.25, 0.5, 0.75, 1].map((ratio) => (
           <polygon
             key={ratio}
@@ -58,7 +66,7 @@ export function AttributeRadar({
               fontSize={8}
               fill="var(--muted)"
             >
-              {ATTRIBUTE_LABELS[key] ?? key}
+              {attributeLabel(key, locale)}
             </text>
           );
         })}

@@ -1,5 +1,14 @@
 import { create } from "zustand";
+import {
+  isLanguage,
+  resolveLocale,
+  translate,
+  type Language,
+} from "@/lib/i18n";
 import type { FilterOptions, ParseProgress, SaveSummary, SortRule } from "@/lib/types";
+
+const SAVED_VIEWS_KEY = "fm27scout.views.v1";
+const LANGUAGE_KEY = "fm27scout.language.v1";
 
 export interface AttributeRule {
   id: string;
@@ -91,6 +100,7 @@ interface AppState {
   hiddenEnabled: boolean;
   displayMode: DisplayMode;
   theme: Theme;
+  language: Language;
   sidebarOpen: boolean;
   inspectorOpen: boolean;
   settingsOpen: boolean;
@@ -122,6 +132,7 @@ interface AppState {
   setHiddenEnabled: (enabled: boolean) => void;
   setDisplayMode: (mode: DisplayMode) => void;
   setTheme: (theme: Theme) => void;
+  setLanguage: (language: Language) => void;
   setSidebarOpen: (open: boolean) => void;
   setInspectorOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
@@ -151,6 +162,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   hiddenEnabled: false,
   displayMode: "display",
   theme: "system",
+  language: loadLanguage(),
   sidebarOpen: true,
   inspectorOpen: true,
   settingsOpen: false,
@@ -294,9 +306,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         return { compareUids: state.compareUids.filter((item) => item !== uid) };
       }
       if (state.compareUids.length >= 4) {
+        const locale = resolveLocale(state.language);
         get().pushToast({
-          title: "最多对比 4 名球员",
-          description: "先移除一名已选球员，再加入新的球员。",
+          title: translate(locale, "toast.compareLimit.title"),
+          description: translate(locale, "toast.compareLimit.description"),
           tone: "default",
         });
         return state;
@@ -307,6 +320,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setHiddenEnabled: (hiddenEnabled) => set({ hiddenEnabled }),
   setDisplayMode: (displayMode) => set({ displayMode }),
   setTheme: (theme) => set({ theme }),
+  setLanguage: (language) => {
+    persistLanguage(language);
+    set({ language });
+  },
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   setInspectorOpen: (inspectorOpen) => set({ inspectorOpen }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
@@ -330,7 +347,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({ toasts: state.toasts.filter((item) => item.id !== id) })),
 }));
 
-const SAVED_VIEWS_KEY = "fm27scout.views.v1";
+function loadLanguage(): Language {
+  if (typeof window === "undefined") return "system";
+  try {
+    const value = window.localStorage.getItem(LANGUAGE_KEY);
+    return isLanguage(value) ? value : "system";
+  } catch {
+    return "system";
+  }
+}
+
+function persistLanguage(language: Language) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LANGUAGE_KEY, language);
+  } catch {
+    // Local storage can be unavailable in hardened webviews; the language still
+    // applies for the current session.
+  }
+}
 
 function loadSavedViews(): SavedView[] {
   if (typeof window === "undefined") return [];

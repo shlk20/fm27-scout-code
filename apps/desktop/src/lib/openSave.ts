@@ -1,9 +1,12 @@
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { listenParseProgress, logMessage, openSave, pickSaveFile } from "./api";
+import { formatNumber } from "./i18n";
+import { useI18n } from "./useI18n";
 import { useAppStore } from "@/store/app";
 
 export function useOpenSave() {
+  const { t, locale } = useI18n();
   const setSession = useAppStore((state) => state.setSession);
   const setParsing = useAppStore((state) => state.setParsing);
   const setParseProgress = useAppStore((state) => state.setParseProgress);
@@ -13,7 +16,7 @@ export function useOpenSave() {
   const openPath = useCallback(
     async (path: string, force = false) => {
       setParsing(true);
-      setParseProgress({ stage: "opening", current: 0, total: 0, message: "正在打开存档" });
+      setParseProgress({ stage: "opening", current: 0, total: 0, message: "Opening save" });
       let unlisten: () => void = () => undefined;
       try {
         unlisten = await listenParseProgress((progress) => setParseProgress(progress));
@@ -21,18 +24,19 @@ export function useOpenSave() {
         setSession(result.save_id, result.summary);
         await queryClient.invalidateQueries();
         pushToast({
-          title: result.cached ? "已加载缓存存档" : "存档解析完成",
+          title: t(result.cached ? "toast.cachedSave" : "toast.parseDone"),
           description: result.cached
-            ? `${result.summary.save_name} · 使用本地缓存`
-            : `${result.report?.players.toLocaleString("en-US") ?? 0} 名球员 · ${(
-                (result.report?.elapsed_ms ?? 0) / 1000
-              ).toFixed(2)} 秒`,
+            ? t("toast.cacheDescription", { name: result.summary.save_name })
+            : t("toast.parsedDescription", {
+                count: formatNumber(result.report?.players ?? 0, locale),
+                seconds: ((result.report?.elapsed_ms ?? 0) / 1000).toFixed(2),
+              }),
           tone: "success",
         });
       } catch (error) {
         await logMessage(`openSave failed: ${String(error)}`);
         pushToast({
-          title: "无法打开存档",
+          title: t("toast.openFailed"),
           description: String(error),
           tone: "error",
         });
@@ -41,13 +45,13 @@ export function useOpenSave() {
         setParsing(false);
       }
     },
-    [pushToast, queryClient, setParseProgress, setParsing, setSession],
+    [locale, pushToast, queryClient, setParseProgress, setParsing, setSession, t],
   );
 
   const chooseAndOpen = useCallback(async () => {
-    const path = await pickSaveFile();
+    const path = await pickSaveFile(t("dialog.saveFilter"));
     if (path) await openPath(path);
-  }, [openPath]);
+  }, [openPath, t]);
 
   return { openPath, chooseAndOpen };
 }

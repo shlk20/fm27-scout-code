@@ -20,12 +20,17 @@ import {
 } from "lucide-react";
 import { useGrowthHistory, usePlayerDetail, usePlayerRoles } from "@/lib/query";
 import type { Attributes, Player, Positions, RoleScore, SnapshotPoint } from "@/lib/types";
+import { ATTRIBUTE_GROUPS, POSITION_LABELS } from "@/lib/types";
 import {
-  ATTRIBUTE_GROUPS,
-  ATTRIBUTE_LABELS,
-  POSITION_LABELS,
-  POSITION_KEYS,
-} from "@/lib/types";
+  attributeLabel,
+  nationLabel,
+  personalityLabel,
+  roleGroup,
+  roleName,
+  severityLabel,
+  traitLabel,
+} from "@/lib/labels";
+import { useI18n } from "@/lib/useI18n";
 import {
   attributeTone,
   caTone,
@@ -42,6 +47,7 @@ import { Badge, Button, EmptyState, Switch } from "./ui";
 type Tab = "attributes" | "roles" | "positions" | "growth" | "hidden" | "contract";
 
 export function Inspector() {
+  const { t, locale } = useI18n();
   const selectedUid = useAppStore((state) => state.selectedUid);
   const setSelectedUid = useAppStore((state) => state.setSelectedUid);
   const hiddenEnabled = useAppStore((state) => state.hiddenEnabled);
@@ -65,8 +71,8 @@ export function Inspector() {
       <aside className="flex h-full w-[372px] shrink-0 flex-col border-l border-[var(--line)] bg-[var(--surface)]">
         <EmptyState
           icon={<UserRound size={20} />}
-          title="选择一名球员"
-          description="点击表格中的任意行查看完整属性、隐藏信息、位置评分与合同。"
+          title={t("inspector.emptyTitle")}
+          description={t("inspector.emptyDescription")}
         />
       </aside>
     );
@@ -94,7 +100,7 @@ export function Inspector() {
       <div className="flex items-center justify-between border-b border-[var(--line)] px-3 py-2">
         <div className="flex items-center gap-2 text-[11px] font-semibold text-[var(--muted)]">
           <ClipboardList size={13} className="text-[var(--accent)]" />
-          球员档案
+          {t("inspector.profile")}
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -104,9 +110,9 @@ export function Inspector() {
             onClick={() => toggleCompare(player.uid)}
           >
             {compareUids.includes(player.uid) ? <Check size={11} /> : <GitCompareArrows size={11} />}
-            对比
+            {t("inspector.compare")}
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedUid(null)} aria-label="关闭档案">
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedUid(null)} aria-label={t("inspector.closeProfile")}>
             <X size={14} />
           </Button>
         </div>
@@ -122,18 +128,22 @@ export function Inspector() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h2 className="text-[17px] font-semibold leading-tight tracking-tight text-[var(--ink)]">
-                    {player.name ?? "未命名球员"}
+                    {player.name ?? t("common.unnamedPlayer")}
                   </h2>
                   <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
-                    <span>{player.club_name ?? "自由球员"}</span>
+                    <span>{player.club_name ?? t("common.freeAgent")}</span>
                     <span className="text-[var(--line-strong)]">·</span>
-                    <span>{player.age ?? "?"} 岁</span>
+                    <span>{t("common.yearsOld", { age: player.age ?? "?" })}</span>
                     <span className="text-[var(--line-strong)]">·</span>
                     <span>
-                      {player.nation_name ??
-                        (player.nation_id != null ? `国家 #${player.nation_id}` : "国籍未知")}
+                      {nationLabel(player.nation_name, locale) ??
+                        (player.nation_id != null
+                          ? t("common.nationNumber", { id: player.nation_id })
+                          : t("common.unknownNation"))}
                     </span>
-                    {player.gender === 1 && <Badge tone="blue">女子</Badge>}
+                    {player.gender === 1 && (
+                      <Badge tone="blue">{t("inspector.womenBadge")}</Badge>
+                    )}
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-1">
@@ -163,35 +173,47 @@ export function Inspector() {
             </span>
             <span className="inline-flex items-center gap-1">
               <CircleDot size={11} />
-              {player.left_foot}/{player.right_foot} 脚
+              {t("common.foot", { left: player.left_foot, right: player.right_foot })}
             </span>
             <span className="inline-flex items-center gap-1">
               <CalendarDays size={11} />
-              合同 {player.contract?.end ?? "—"}
+              {t("inspector.contractUntil", { date: player.contract?.end ?? "—" })}
             </span>
           </div>
 
           <div className="mt-3 grid grid-cols-3 gap-1.5">
-            <MiniStat icon={<Coins size={11} />} label="身价" value={formatValue(player.transfer_value)} />
-            <MiniStat icon={<BriefcaseBusiness size={11} />} label="周薪" value={formatWage(player.contract?.wage)} />
+            <MiniStat
+              icon={<Coins size={11} />}
+              label={t("inspector.value")}
+              value={formatValue(player.transfer_value)}
+            />
+            <MiniStat
+              icon={<BriefcaseBusiness size={11} />}
+              label={t("inspector.wage")}
+              value={formatWage(player.contract?.wage, locale)}
+            />
             <MiniStat
               icon={<HeartPulse size={11} />}
-              label="状态"
+              label={t("inspector.condition")}
               value={`${Math.round(player.raw_condition / 100)}% / ${Math.round(player.raw_match_sharpness / 100)}%`}
             />
           </div>
 
           {player.on_loan && (
             <div className="mt-2 flex items-center gap-1.5 rounded-[7px] border border-[var(--blue-line)] bg-[var(--blue-soft)] px-2 py-1.5 text-[10px] text-[var(--blue)]">
-              <span className="font-semibold">租借中</span>
-              <span>来自 {player.loan_parent_club_name ?? "未知俱乐部"}</span>
+              <span className="font-semibold">{t("inspector.onLoan")}</span>
+              <span>
+                {t("inspector.fromClub", {
+                  club: player.loan_parent_club_name ?? t("common.unknownClub"),
+                })}
+              </span>
               <span className="ml-auto font-mono">{player.loan_end ?? ""}</span>
             </div>
           )}
           {player.injuries.some((injury) => injury.kind === "current") && (
             <div className="mt-2 flex items-center gap-1.5 rounded-[7px] border border-[var(--danger-soft)] bg-[var(--danger-soft)]/60 px-2 py-1.5 text-[10px] text-[var(--danger)]">
               <HeartPulse size={11} />
-              <span className="font-semibold">伤病中</span>
+              <span className="font-semibold">{t("inspector.injured")}</span>
               <span className="ml-auto font-mono">
                 {player.injuries.find((injury) => injury.kind === "current")?.expected_return ?? ""}
               </span>
@@ -200,23 +222,31 @@ export function Inspector() {
           {player.suspensions.length > 0 && (
             <div className="mt-2 flex items-center gap-1.5 rounded-[7px] border border-[var(--gold-line)] bg-[var(--gold-soft)] px-2 py-1.5 text-[10px] text-[var(--gold)]">
               <ShieldAlert size={11} />
-              <span className="font-semibold">{player.suspensions.length} 项停赛</span>
+              <span className="font-semibold">
+                {t(
+                  player.suspensions.length === 1
+                    ? "inspector.suspensionOne"
+                    : "inspector.suspensions",
+                  { count: player.suspensions.length },
+                )}
+              </span>
               <span className="ml-auto font-mono">
-                最近{" "}
-                {[...player.suspensions]
-                  .sort((left, right) =>
-                    (right.issued_date ?? "").localeCompare(left.issued_date ?? ""),
-                  )[0]?.issued_date ?? ""}
+                {t("inspector.latest", {
+                  date:
+                    [...player.suspensions].sort((left, right) =>
+                      (right.issued_date ?? "").localeCompare(left.issued_date ?? ""),
+                    )[0]?.issued_date ?? "",
+                })}
               </span>
             </div>
           )}
 
           <div className="mt-3 flex items-center justify-between rounded-[7px] border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5">
-            <span className="text-[10px] text-[var(--muted)]">显示 1–20 / 原始 1–100</span>
+            <span className="text-[10px] text-[var(--muted)]">{t("inspector.displayMode")}</span>
             <Switch
               checked={displayMode === "raw"}
               onChange={(raw) => setDisplayMode(raw ? "raw" : "display")}
-              label="原始数值"
+              label={t("inspector.rawValues")}
             />
           </div>
         </div>
@@ -225,33 +255,33 @@ export function Inspector() {
           <div className="border-b border-[var(--line)] px-4 py-3">
             <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
               <Sparkles size={11} />
-              习惯动作
+              {t("inspector.traits")}
             </div>
             <div className="flex flex-wrap gap-1">
               {player.traits.map((trait) => (
                 <Badge key={trait.bit} tone="outline">
-                  {trait.name ?? `习惯 #${trait.bit}`}
+                  {traitLabel(trait.bit, trait.name, locale)}
                 </Badge>
               ))}
             </div>
           </div>
         )}
 
-        <div className="sticky top-0 z-10 flex gap-0.5 border-b border-[var(--line)] bg-[var(--surface)] px-2 py-1.5">
+        <div className="sticky top-0 z-10 flex flex-wrap gap-0.5 border-b border-[var(--line)] bg-[var(--surface)] px-2 py-1.5">
           {[
-            ["attributes", "属性"],
-            ["roles", "角色"],
-            ["positions", "位置"],
-            ["growth", "成长"],
-            ["hidden", "隐藏"],
-            ["contract", "合同"],
+            ["attributes", t("inspector.tab.attributes")],
+            ["roles", t("inspector.tab.roles")],
+            ["positions", t("inspector.tab.positions")],
+            ["growth", t("inspector.tab.growth")],
+            ["hidden", t("inspector.tab.hidden")],
+            ["contract", t("inspector.tab.contract")],
           ].map(([key, label]) => (
             <button
               key={key}
               type="button"
               onClick={() => setTab(key as Tab)}
               className={cn(
-                "focus-ring rounded-[6px] px-2.5 py-1 text-[10px] font-medium transition-colors",
+                "focus-ring whitespace-nowrap rounded-[6px] px-2 py-1 text-[10px] font-medium transition-colors",
                 tab === key
                   ? "bg-[var(--accent-soft)] text-[var(--accent-strong)]"
                   : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]",
@@ -311,6 +341,7 @@ function AttributesPanel({
   attributes: Attributes;
   max: number;
 }) {
+  const { t, locale } = useI18n();
   const isGoalkeeper = player.natural_positions.includes("GK") || player.positions.gk >= 15;
   const groups = isGoalkeeper
     ? [...ATTRIBUTE_GROUPS.technical.slice(0, 2), ...ATTRIBUTE_GROUPS.goalkeeping, ...ATTRIBUTE_GROUPS.technical.slice(2)]
@@ -322,18 +353,23 @@ function AttributesPanel({
     <div className="space-y-4 px-4 py-3">
       <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)]">
         <div className="border-b border-[var(--line)] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-          能力雷达
+          {t("inspector.radar")}
         </div>
         <AttributeRadar values={attributes} keys={radarKeys} max={max} />
       </div>
       {groups.map((group) => (
-        <div key={group.label}>
+        <div key={group.labelKey}>
           <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            {group.label}
+            {t(`attribute.group.${group.labelKey}`)}
           </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
             {group.keys.map((key) => (
-              <AttributeRow key={key} label={ATTRIBUTE_LABELS[key] ?? key} value={attributes[key] ?? 0} max={max} />
+              <AttributeRow
+                key={key}
+                label={attributeLabel(key, locale)}
+                value={attributes[key] ?? 0}
+                max={max}
+              />
             ))}
           </div>
         </div>
@@ -371,16 +407,17 @@ function HiddenPanel({
   hiddenEnabled: boolean;
   onEnable: () => void;
 }) {
+  const { t, locale } = useI18n();
   if (!hiddenEnabled) {
     return (
       <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
         <LockKeyhole size={20} className="text-[var(--muted)]" />
-        <div className="text-xs font-semibold text-[var(--ink)]">隐藏属性已关闭</div>
+        <div className="text-xs font-semibold text-[var(--ink)]">{t("inspector.hiddenOff")}</div>
         <p className="max-w-[240px] text-[11px] leading-relaxed text-[var(--muted)]">
-          开启后可查看性格、稳定、大赛、受伤倾向等隐藏信息。仅限单机使用。
+          {t("inspector.hiddenOffDescription")}
         </p>
         <Button size="sm" variant="gold" onClick={onEnable}>
-          开启隐藏属性
+          {t("inspector.enableHidden")}
         </Button>
       </div>
     );
@@ -390,65 +427,62 @@ function HiddenPanel({
     <div className="space-y-4 px-4 py-3">
       <div>
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-          隐藏属性
+          {t("inspector.hiddenAttributes")}
         </div>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
           {ATTRIBUTE_GROUPS.hidden[0].keys.map((key) => (
-            <AttributeRow key={key} label={ATTRIBUTE_LABELS[key]} value={hidden[key] ?? 0} max={max} />
+            <AttributeRow
+              key={key}
+              label={attributeLabel(key, locale)}
+              value={hidden[key] ?? 0}
+              max={max}
+            />
           ))}
         </div>
       </div>
       {player.personality && (
         <div>
           <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            性格
+            {t("inspector.personality")}
           </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
             {Object.entries(player.personality).map(([key, value]) => (
-              <AttributeRow key={key} label={PERSONALITY_LABELS[key] ?? key} value={value} max={20} />
+              <AttributeRow
+                key={key}
+                label={personalityLabel(key, locale)}
+                value={value}
+                max={20}
+              />
             ))}
           </div>
         </div>
       )}
       <div className="rounded-lg border border-[var(--danger-soft)] bg-[var(--danger-soft)]/50 p-2 text-[10px] leading-relaxed text-[var(--danger)]">
-        这些数值通常只在游戏内教练报告或编辑器中出现。请仅用于单机分析，不要用于线上联赛。
+        {t("inspector.hiddenWarning")}
       </div>
     </div>
   );
 }
 
-const SEVERITY_LABELS: Record<number, string> = {
-  0: "轻微",
-  1: "轻度",
-  2: "中度",
-  3: "重度",
-};
-
-const PERSONALITY_LABELS: Record<string, string> = {
-  adaptability: "适应",
-  ambition: "雄心",
-  loyalty: "忠诚",
-  pressure: "抗压",
-  professionalism: "职业",
-  sportsmanship: "体育精神",
-  temperament: "气质",
-  controversy: "争议",
-};
-
 function RolesPanel({ roles, bestId }: { roles: RoleScore[]; bestId: string | null }) {
+  const { t, locale } = useI18n();
   if (roles.length === 0) {
-    return <div className="px-4 py-6 text-center text-[11px] text-[var(--muted)]">正在计算角色评分…</div>;
+    return (
+      <div className="px-4 py-6 text-center text-[11px] text-[var(--muted)]">
+        {t("inspector.rolesLoading")}
+      </div>
+    );
   }
   const groups = [...new Set(roles.map((role) => role.group))];
   return (
     <div className="space-y-4 px-4 py-3">
       <p className="text-[10px] leading-relaxed text-[var(--muted)]">
-        按 FM 角色关键属性加权，并结合位置熟练度计算。评分 1–20，仅供球探参考。
+        {t("inspector.rolesDescription")}
       </p>
       {groups.map((group) => (
         <div key={group}>
           <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            {group}
+            {roleGroup(group, locale)}
           </div>
           <div className="space-y-1.5">
             {roles
@@ -468,7 +502,7 @@ function RolesPanel({ roles, bestId }: { roles: RoleScore[]; bestId: string | nu
                   >
                     <div className="flex items-center justify-between gap-2 text-[10px]">
                       <span className={cn("truncate", best ? "font-semibold text-[var(--accent-strong)]" : "text-[var(--ink)]")}>
-                        {role.name}
+                        {roleName(role.id, role.name, locale)}
                       </span>
                       <span className="shrink-0 font-mono text-[9px] text-[var(--muted)]">
                         {role.position} {role.position_rating}
@@ -496,14 +530,15 @@ function RolesPanel({ roles, bestId }: { roles: RoleScore[]; bestId: string | nu
 }
 
 function GrowthPanel({ points, gameDate }: { points: SnapshotPoint[]; gameDate: string | null }) {
+  const { t, locale } = useI18n();
   if (points.length < 2) {
     return (
       <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
         <TrendingUp size={20} className="text-[var(--muted)]" />
-        <div className="text-xs font-semibold text-[var(--ink)]">还没有成长曲线</div>
+        <div className="text-xs font-semibold text-[var(--ink)]">{t("inspector.noGrowth")}</div>
         <p className="max-w-[250px] text-[11px] leading-relaxed text-[var(--muted)]">
-          在游戏里推进日期后再次打开同一存档，就会记录新的 CA / PA / 身价快照。
-          {gameDate ? ` 当前快照日期：${gameDate}。` : ""}
+          {t("inspector.noGrowthDescription")}
+          {gameDate ? t("inspector.currentSnapshot", { date: gameDate }) : ""}
         </p>
       </div>
     );
@@ -529,13 +564,18 @@ function GrowthPanel({ points, gameDate }: { points: SnapshotPoint[]; gameDate: 
     <div className="space-y-3 px-4 py-3">
       <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2">
         <div className="mb-1 flex items-center justify-between px-1 text-[9px] text-[var(--muted)]">
-          <span>CA / PA 成长曲线</span>
+          <span>{t("inspector.growthTitle")}</span>
           <span className={caDelta >= 0 ? "text-[var(--accent-strong)]" : "text-[var(--danger)]"}>
             CA {caDelta >= 0 ? "+" : ""}
             {caDelta}
           </span>
         </div>
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label="CA PA 成长曲线">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full"
+          role="img"
+          aria-label={t("inspector.growthAria")}
+        >
           {[100, 140, 180].map((line) => (
             <g key={line}>
               <line x1={pad} x2={width - pad} y1={y(line)} y2={y(line)} stroke="var(--line)" strokeWidth="0.5" strokeDasharray="3 3" />
@@ -561,7 +601,9 @@ function GrowthPanel({ points, gameDate }: { points: SnapshotPoint[]; gameDate: 
           <div key={point.game_date} className="flex items-center justify-between rounded-[6px] border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 text-[10px]">
             <div className="min-w-0">
               <div className="font-mono text-[var(--ink)]">{point.game_date}</div>
-              <div className="truncate text-[9px] text-[var(--muted)]">{point.club_name ?? "自由球员"}</div>
+              <div className="truncate text-[9px] text-[var(--muted)]">
+                {point.club_name ?? t("common.freeAgent")}
+              </div>
             </div>
             <div className="flex items-center gap-3 font-mono">
               <span className="text-[var(--accent-strong)]">CA {point.ca ?? "—"}</span>
@@ -572,17 +614,18 @@ function GrowthPanel({ points, gameDate }: { points: SnapshotPoint[]; gameDate: 
         ))}
       </div>
       <p className="text-[9px] leading-relaxed text-[var(--muted)]">
-        快照以存档名称归组；同一生涯再次打开并解析后会自动追加，不会修改存档。
+        {t("inspector.growthNote")}
       </p>
     </div>
   );
 }
 
 function PositionsPanel({ positions }: { positions: Positions }) {
+  const { t } = useI18n();
   return (
     <div className="px-4 py-3">
       <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-        位置评分
+        {t("inspector.positionRatings")}
       </div>
       <div className="grid grid-cols-3 gap-1.5">
         {POSITION_ROWS.flat().map((position, index) =>
@@ -616,38 +659,51 @@ function PositionsPanel({ positions }: { positions: Positions }) {
         )}
       </div>
       <div className="mt-2 flex items-center gap-2 text-[10px] text-[var(--muted)]">
-        <span className="inline-block h-2 w-2 rounded-full bg-[var(--accent)]" /> 天然位置 ≥ 18
-        <span className="ml-2 inline-block h-2 w-2 rounded-full bg-[var(--line-strong)]" /> 可胜任 15–17
+        <span className="inline-block h-2 w-2 rounded-full bg-[var(--accent)]" />{" "}
+        {t("inspector.natural")}
+        <span className="ml-2 inline-block h-2 w-2 rounded-full bg-[var(--line-strong)]" />{" "}
+        {t("inspector.accomplished")}
       </div>
     </div>
   );
 }
 
 function ContractPanel({ player }: { player: Player }) {
+  const { t, locale } = useI18n();
   const contract = player.contract;
   return (
     <div className="space-y-3 px-4 py-3">
       <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-[var(--muted)]">当前合同</div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
+              {t("inspector.currentContract")}
+            </div>
             <div className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
-              {contract?.club_name ?? "无合同 / 自由球员"}
+              {contract?.club_name ?? t("inspector.noContract")}
             </div>
           </div>
-          {contract?.on_loan && <Badge tone="blue">租借</Badge>}
+          {contract?.on_loan && <Badge tone="blue">{t("inspector.loanBadge")}</Badge>}
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <MiniStat icon={<Coins size={11} />} label="周薪" value={formatWage(contract?.wage)} />
-          <MiniStat icon={<CalendarDays size={11} />} label="到期" value={formatDate(contract?.end)} />
+          <MiniStat
+            icon={<Coins size={11} />}
+            label={t("inspector.wage")}
+            value={formatWage(contract?.wage, locale)}
+          />
+          <MiniStat
+            icon={<CalendarDays size={11} />}
+            label={t("inspector.expiry")}
+            value={formatDate(contract?.end)}
+          />
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
           <div className="rounded-[6px] bg-[var(--surface)] px-2 py-1.5">
-            <div className="text-[var(--muted)]">开始</div>
+            <div className="text-[var(--muted)]">{t("inspector.start")}</div>
             <div className="font-mono text-[var(--ink)]">{formatDate(contract?.start)}</div>
           </div>
           <div className="rounded-[6px] bg-[var(--surface)] px-2 py-1.5">
-            <div className="text-[var(--muted)]">加入俱乐部</div>
+            <div className="text-[var(--muted)]">{t("inspector.joinedClub")}</div>
             <div className="font-mono text-[var(--ink)]">{formatDate(player.club_join_date)}</div>
           </div>
         </div>
@@ -656,7 +712,7 @@ function ContractPanel({ player }: { player: Player }) {
       {player.injuries.length > 0 && (
         <div>
           <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            伤病史
+            {t("inspector.injuryHistory")}
           </div>
           <div className="space-y-1">
             {[...player.injuries]
@@ -674,20 +730,23 @@ function ContractPanel({ player }: { player: Player }) {
                   <div className="min-w-0">
                     <div className="font-mono text-[var(--ink)]">
                       {injury.kind === "current"
-                        ? `预计 ${injury.expected_return ?? "—"} 复出`
-                        : injury.date ?? "日期未知"}
+                        ? t("inspector.expectedReturn", {
+                            date: injury.expected_return ?? "—",
+                          })
+                        : (injury.date ?? t("inspector.unknownDate"))}
                     </div>
                     <div className="truncate text-[9px] text-[var(--muted)]">
-                      {injury.club_name ?? "未知俱乐部"}
+                      {injury.club_name ?? t("common.unknownClub")}
                       {injury.cause != null
-                        ? ` · ${injury.cause === 1 ? "比赛中" : "训练中"}`
+                        ? ` · ${injury.cause === 1 ? t("inspector.matchCause") : t("inspector.trainingCause")}`
                         : ""}
                     </div>
                   </div>
                   <Badge tone={injury.severity != null && injury.severity >= 2 ? "danger" : "outline"}>
                     {injury.severity != null
-                      ? SEVERITY_LABELS[injury.severity] ?? `严重度 ${injury.severity}`
-                      : injury.type_name ?? "伤病"}
+                      ? (severityLabel(injury.severity, locale) ??
+                        t("inspector.severityFallback", { level: injury.severity }))
+                      : (injury.type_name ?? t("inspector.injury"))}
                   </Badge>
                 </div>
               ))}
@@ -698,7 +757,7 @@ function ContractPanel({ player }: { player: Player }) {
       {player.suspensions.length > 0 && (
         <div>
           <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            停赛
+            {t("inspector.suspensionsTitle")}
           </div>
           <div className="space-y-1">
             {[...player.suspensions]
@@ -713,13 +772,19 @@ function ContractPanel({ player }: { player: Player }) {
                   <div>
                     <div className="font-medium text-[var(--gold)]">
                       {suspension.scope === "nation"
-                        ? `全国赛事 · ${suspension.nation_name ?? `国家 #${suspension.nation_id}`}`
+                        ? t("inspector.nationScope", {
+                            nation:
+                              nationLabel(suspension.nation_name, locale) ??
+                              t("common.nationNumber", { id: suspension.nation_id ?? "?" }),
+                          })
                         : suspension.scope === "competition"
-                          ? `单项赛事 #${suspension.competition_id}`
-                          : "范围未知"}
+                          ? t("inspector.competitionScope", {
+                              id: suspension.competition_id ?? "?",
+                            })
+                          : t("inspector.scopeUnknown")}
                     </div>
                     <div className="text-[9px] opacity-70">
-                      判罚日期 {suspension.issued_date ?? "—"}
+                      {t("inspector.issued", { date: suspension.issued_date ?? "—" })}
                     </div>
                   </div>
                   <span className="font-mono text-[9px] opacity-70">#{suspension.scope_code}</span>
@@ -731,10 +796,15 @@ function ContractPanel({ player }: { player: Player }) {
 
       {contract?.on_loan && (
         <div className="rounded-xl border border-[var(--blue-line)] bg-[var(--blue-soft)] p-3 text-[11px] text-[var(--blue)]">
-          <div className="font-semibold">租借信息</div>
-          <div className="mt-1">母队：{contract.loan_parent_club_name ?? "—"}</div>
+          <div className="font-semibold">{t("inspector.loanInfo")}</div>
+          <div className="mt-1">
+            {t("inspector.parentClub", { club: contract.loan_parent_club_name ?? "—" })}
+          </div>
           <div>
-            租借期：{formatDate(contract.loan_start)} → {formatDate(contract.loan_end)}
+            {t("inspector.loanPeriod", {
+              start: formatDate(contract.loan_start),
+              end: formatDate(contract.loan_end),
+            })}
           </div>
         </div>
       )}
@@ -742,7 +812,7 @@ function ContractPanel({ player }: { player: Player }) {
       {contract && contract.clauses.length > 0 && (
         <div>
           <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            合同条款
+            {t("inspector.clauses")}
           </div>
           <div className="space-y-1">
             {contract.clauses.map((clause, index) => (
@@ -750,7 +820,9 @@ function ContractPanel({ player }: { player: Player }) {
                 key={index}
                 className="flex items-center justify-between rounded-[6px] border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 text-[10px]"
               >
-                <span className="text-[var(--muted)]">条款 #{clause.kind}</span>
+                <span className="text-[var(--muted)]">
+                  {t("inspector.clause", { kind: clause.kind })}
+                </span>
                 <span className="font-mono text-[var(--ink)]">
                   {clause.value != null ? formatValue(clause.value) : clause.parameter ?? "—"}
                 </span>
@@ -763,7 +835,7 @@ function ContractPanel({ player }: { player: Player }) {
       {contract && contract.chain.length > 1 && (
         <div>
           <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-            合同链
+            {t("inspector.chain")}
           </div>
           <div className="space-y-1">
             {contract.chain.map((entry, index) => (
@@ -771,13 +843,15 @@ function ContractPanel({ player }: { player: Player }) {
                 <ChevronRight size={11} className="text-[var(--muted)]" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[10px] font-medium text-[var(--ink)]">
-                    {entry.club_name ?? "未知俱乐部"}
+                    {entry.club_name ?? t("common.unknownClub")}
                   </div>
                   <div className="text-[9px] text-[var(--muted)]">
                     {entry.start ?? "—"} → {entry.end ?? "—"}
                   </div>
                 </div>
-                {entry.has_terms && <Badge tone="outline">合同</Badge>}
+                {entry.has_terms && (
+                  <Badge tone="outline">{t("inspector.contractBadge")}</Badge>
+                )}
               </div>
             ))}
           </div>

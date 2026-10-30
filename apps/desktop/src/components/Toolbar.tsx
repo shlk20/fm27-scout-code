@@ -18,11 +18,14 @@ import {
 } from "lucide-react";
 import { useSaves } from "@/lib/query";
 import { relativeTime, cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/i18n";
+import { useI18n } from "@/lib/useI18n";
 import { useAppStore } from "@/store/app";
 import { useOpenSave } from "@/lib/openSave";
 import { Badge, Button, Input } from "./ui";
 
 export function Toolbar() {
+  const { t, locale } = useI18n();
   const summary = useAppStore((state) => state.summary);
   const sidebarOpen = useAppStore((state) => state.sidebarOpen);
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
@@ -73,8 +76,8 @@ export function Toolbar() {
           size="icon"
           className="h-7 w-7"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          aria-label={sidebarOpen ? "收起筛选" : "展开筛选"}
-          title={sidebarOpen ? "收起筛选" : "展开筛选"}
+          aria-label={sidebarOpen ? t("toolbar.hideSidebar") : t("toolbar.showSidebar")}
+          title={sidebarOpen ? t("toolbar.hideSidebar") : t("toolbar.showSidebar")}
         >
           {sidebarOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
         </Button>
@@ -87,7 +90,7 @@ export function Toolbar() {
           >
             <Database size={13} className="text-[var(--accent)]" />
             <span className="max-w-[220px] truncate text-[11px] font-semibold text-[var(--ink)]">
-              {summary?.save_name ?? "未打开存档"}
+              {summary?.save_name ?? t("toolbar.noSave")}
             </span>
             {summary?.game_date && (
               <span className="font-mono text-[10px] text-[var(--muted)]">{summary.game_date}</span>
@@ -98,13 +101,13 @@ export function Toolbar() {
             <div className="absolute left-0 top-[calc(100%+5px)] z-40 w-[360px] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-pop)]">
               <div className="border-b border-[var(--line)] px-3 py-2">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  最近存档
+                  {t("toolbar.recentSaves")}
                 </div>
               </div>
               <div className="max-h-[320px] overflow-auto p-1.5">
                 {saves.length === 0 && (
                   <div className="px-2 py-4 text-center text-[11px] text-[var(--muted)]">
-                    还没有缓存过存档
+                    {t("toolbar.noCachedSaves")}
                   </div>
                 )}
                 {saves.map((save) => (
@@ -125,14 +128,20 @@ export function Toolbar() {
                         {save.file_name}
                       </div>
                       <div className="mt-0.5 flex items-center gap-2 text-[9px] text-[var(--muted)]">
-                        <span>{save.game_date ?? "未知日期"}</span>
+                        <span>{save.game_date ?? t("common.unknownDate")}</span>
                         <span>·</span>
-                        <span>{save.players.toLocaleString("en-US")} 人</span>
+                        <span>
+                          {t("toolbar.people", {
+                            count: formatNumber(save.players, locale),
+                          })}
+                        </span>
                         <span>·</span>
-                        <span>{relativeTime(save.parsed_at)}</span>
+                        <span>{relativeTime(save.parsed_at, locale)}</span>
                       </div>
                     </div>
-                    {summary?.path === save.path && <Badge tone="accent">当前</Badge>}
+                    {summary?.path === save.path && (
+                      <Badge tone="accent">{t("toolbar.current")}</Badge>
+                    )}
                   </button>
                 ))}
               </div>
@@ -146,7 +155,7 @@ export function Toolbar() {
                   className="flex w-full items-center gap-2 rounded-[7px] px-2 py-2 text-[11px] font-medium text-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
                 >
                   <FolderOpen size={13} />
-                  打开其他存档…
+                  {t("toolbar.openOther")}
                   <span className="ml-auto kbd">⌘O</span>
                 </button>
               </div>
@@ -156,7 +165,7 @@ export function Toolbar() {
 
         <Button variant="secondary" size="sm" onClick={() => void chooseAndOpen()} className="h-8">
           <FilePlus2 size={13} />
-          打开
+          {t("toolbar.open")}
         </Button>
       </div>
 
@@ -170,7 +179,7 @@ export function Toolbar() {
             id="global-search"
             value={search}
             onChange={(event) => updateSearch(event.target.value)}
-            placeholder="搜索球员、俱乐部…"
+            placeholder={t("toolbar.searchPlaceholder")}
             className="h-8 pl-8 pr-16"
           />
           <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
@@ -179,7 +188,7 @@ export function Toolbar() {
                 type="button"
                 className="pointer-events-auto rounded p-0.5 text-[var(--muted)] hover:text-[var(--ink)]"
                 onClick={() => updateSearch("")}
-                aria-label="清除搜索"
+                aria-label={t("toolbar.clearSearch")}
               >
                 <X size={12} />
               </button>
@@ -201,16 +210,16 @@ export function Toolbar() {
               return;
             }
             pushToast({
-              title: "开启隐藏属性？",
-              description: "隐藏属性仅限单机使用，线上联赛可能被视为作弊。",
+              title: t("toast.hiddenOn.title"),
+              description: t("toast.hiddenOn.description"),
               tone: "default",
             });
             setHiddenEnabled(true);
           }}
-          title="隐藏属性"
+          title={t("toolbar.hidden")}
         >
           {hiddenEnabled ? <Eye size={13} /> : <LockKeyhole size={13} />}
-          <span className="hidden xl:inline">隐藏</span>
+          <span className="hidden xl:inline">{t("toolbar.hiddenShort")}</span>
         </Button>
         <Button
           variant={compareUids.length > 0 ? "gold" : "ghost"}
@@ -218,10 +227,10 @@ export function Toolbar() {
           className="h-8"
           disabled={compareUids.length < 2}
           onClick={() => setCompareOpen(true)}
-          title="对比球员"
+          title={t("toolbar.compare")}
         >
           <GitCompareArrows size={13} />
-          <span className="hidden xl:inline">对比</span>
+          <span className="hidden xl:inline">{t("toolbar.compareShort")}</span>
           {compareUids.length > 0 && (
             <span className="rounded-full bg-black/10 px-1 font-mono text-[9px]">{compareUids.length}</span>
           )}
@@ -232,17 +241,17 @@ export function Toolbar() {
           size="sm"
           className="h-8"
           onClick={() => setAnalysisOpen(true)}
-          title="分析中心"
+          title={t("toolbar.analysis")}
         >
           <BarChart3 size={13} />
-          <span className="hidden xl:inline">分析</span>
+          <span className="hidden xl:inline">{t("toolbar.analysisShort")}</span>
         </Button>
         <Button
           variant="ghost"
           size="icon"
           className="h-7 w-7"
           onClick={() => setExportOpen(true)}
-          title="导出"
+          title={t("toolbar.export")}
         >
           <Download size={14} />
         </Button>
@@ -251,7 +260,7 @@ export function Toolbar() {
           size="icon"
           className="h-7 w-7"
           onClick={() => setSettingsOpen(true)}
-          title="设置"
+          title={t("toolbar.settings")}
         >
           <Settings2 size={14} />
         </Button>
@@ -260,7 +269,7 @@ export function Toolbar() {
           size="icon"
           className="h-7 w-7"
           onClick={() => setHelpOpen(true)}
-          title="关于与帮助"
+          title={t("toolbar.help")}
         >
           <HelpCircle size={14} />
         </Button>

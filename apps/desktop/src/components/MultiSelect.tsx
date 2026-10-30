@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
 import { Checkbox, Input } from "./ui";
+import { useI18n } from "@/lib/useI18n";
 import { cn } from "@/lib/utils";
 import type { FilterOption } from "@/lib/types";
 
@@ -19,6 +20,7 @@ export function MultiSelect({
   searchable?: boolean;
   maxLabel?: number;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
@@ -65,7 +67,7 @@ export function MultiSelect({
             <span
               role="button"
               tabIndex={0}
-              aria-label="清除"
+              aria-label={t("common.clear")}
               className="rounded-full p-0.5 text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--ink)]"
               onClick={(event) => {
                 event.stopPropagation();
@@ -98,7 +100,7 @@ export function MultiSelect({
                   autoFocus
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="搜索…"
+                  placeholder={t("multiSelect.search")}
                   className="h-7 pl-7 text-[11px]"
                 />
               </div>
@@ -106,7 +108,9 @@ export function MultiSelect({
           )}
           <div className="thin-scroll max-h-56 overflow-auto p-1.5">
             {filtered.length === 0 && (
-              <div className="px-2 py-3 text-center text-[11px] text-[var(--muted)]">没有匹配项</div>
+              <div className="px-2 py-3 text-center text-[11px] text-[var(--muted)]">
+                {t("multiSelect.noMatches")}
+              </div>
             )}
             {filtered.slice(0, 250).map((option) => (
               <div
@@ -130,7 +134,7 @@ export function MultiSelect({
             ))}
             {filtered.length > 250 && (
               <div className="px-2 py-2 text-center text-[9px] text-[var(--muted)]">
-                显示前 250 项 / 共 {filtered.length} 项，请继续输入搜索
+                {t("multiSelect.limit", { total: filtered.length })}
               </div>
             )}
           </div>

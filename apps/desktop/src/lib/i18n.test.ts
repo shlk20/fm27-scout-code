@@ -1,0 +1,53 @@
+import { describe, expect, it } from "vitest";
+import { resolveLocale, translate } from "./i18n";
+import { attributeLabel, nationLabel, personalityLabel, roleName, traitLabel } from "./labels";
+
+describe("resolveLocale", () => {
+  it("follows Simplified Chinese system locales", () => {
+    expect(resolveLocale("system", ["zh-CN"])).toBe("zh-CN");
+    expect(resolveLocale("system", ["zh-Hans-CN"])).toBe("zh-CN");
+  });
+
+  it("follows English system locales", () => {
+    expect(resolveLocale("system", ["en-GB"])).toBe("en");
+    expect(resolveLocale("system", ["en-US", "zh-CN"])).toBe("en");
+  });
+
+  it("falls back to English for unsupported languages", () => {
+    expect(resolveLocale("system", ["fr-FR"])).toBe("en");
+    expect(resolveLocale("system", [])).toBe("en");
+  });
+
+  it("honours an explicit preference", () => {
+    expect(resolveLocale("zh-CN", ["en-US"])).toBe("zh-CN");
+    expect(resolveLocale("en", ["zh-CN"])).toBe("en");
+  });
+});
+
+describe("translate", () => {
+  it("interpolates values", () => {
+    expect(translate("en", "common.yearsOld", { age: 24 })).toBe("24 yrs");
+    expect(translate("zh-CN", "common.yearsOld", { age: 24 })).toBe("24 岁");
+  });
+
+  it("translates chrome strings", () => {
+    expect(translate("en", "filter.title")).toBe("Filters");
+    expect(translate("zh-CN", "filter.title")).toBe("筛选");
+  });
+});
+
+describe("localized domain labels", () => {
+  it("translates country names only in English mode", () => {
+    expect(nationLabel("英格兰", "en")).toBe("England");
+    expect(nationLabel("英格兰", "zh-CN")).toBe("英格兰");
+    expect(nationLabel("Wales", "en")).toBe("Wales");
+  });
+
+  it("translates attributes, traits, roles and personality", () => {
+    expect(attributeLabel("passing", "en")).toBe("Passing");
+    expect(attributeLabel("passing", "zh-CN")).toBe("传球");
+    expect(traitLabel(8, "Shoots From Distance", "zh-CN")).toBe("远射");
+    expect(roleName("poacher", "抢点前锋（进攻）", "en")).toBe("Poacher (Attack)");
+    expect(personalityLabel("professionalism", "en")).toBe("Professionalism");
+  });
+});
