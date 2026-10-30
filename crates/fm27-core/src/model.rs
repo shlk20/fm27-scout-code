@@ -166,6 +166,42 @@ pub struct Trait {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoleScore {
+    pub id: String,
+    pub name: String,
+    pub group: String,
+    pub score: u8,
+    pub position: String,
+    pub position_rating: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Injury {
+    /// `current` for an expected return the save still tracks, `history` for a past injury.
+    pub kind: String,
+    pub date: Option<String>,
+    pub expected_return: Option<String>,
+    pub type_id: Option<u16>,
+    pub type_name: Option<String>,
+    pub cause: Option<u8>,
+    pub severity: Option<u8>,
+    pub team_id: Option<u32>,
+    pub club_uid: Option<u32>,
+    pub club_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Suspension {
+    pub scope: String,
+    pub scope_code: u8,
+    pub competition_id: Option<u16>,
+    pub competition_name: Option<String>,
+    pub nation_id: Option<u16>,
+    pub nation_name: Option<String>,
+    pub issued_date: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
     pub uid: u32,
     pub unique_id: Option<u32>,
@@ -178,6 +214,10 @@ pub struct Player {
     pub birth_date: Option<String>,
     pub age: Option<i32>,
     pub nation_id: Option<u16>,
+    #[serde(default)]
+    pub nation_name: Option<String>,
+    #[serde(default)]
+    pub gender: Option<u8>,
     pub second_nation_ids: Vec<u32>,
     pub home_grown_nation_ids: Vec<u32>,
     pub home_grown_club_uids: Vec<Option<u32>>,
@@ -191,6 +231,8 @@ pub struct Player {
     pub club_name: Option<String>,
     pub club_short_name: Option<String>,
     pub club_nation_id: Option<u32>,
+    #[serde(default)]
+    pub club_nation_name: Option<String>,
     pub club_fa_nation_id: Option<u32>,
     pub club_reputation: Option<u16>,
     pub club_last_league_position: Option<u8>,
@@ -213,6 +255,12 @@ pub struct Player {
     pub raw_match_sharpness: u16,
     pub traits: Vec<Trait>,
     pub trait_bits: Option<u64>,
+    #[serde(default)]
+    pub best_role: Option<RoleScore>,
+    #[serde(default)]
+    pub injuries: Vec<Injury>,
+    #[serde(default)]
+    pub suspensions: Vec<Suspension>,
     pub on_loan: Option<bool>,
     pub loan_parent_club_uid: Option<u32>,
     pub loan_parent_club_name: Option<String>,
@@ -237,7 +285,10 @@ pub struct Club {
     pub name: String,
     pub short_name: String,
     pub nation_id: u32,
+    pub nation_name: Option<String>,
     pub fa_nation_id: u32,
+    pub fa_nation_name: Option<String>,
+    pub gender: Option<u8>,
     pub reputation: Option<u16>,
     pub last_league_position: Option<u8>,
     pub parent_club_uid: Option<u32>,

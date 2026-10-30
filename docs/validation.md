@@ -61,8 +61,12 @@ club mismatches: 0
 | Markerless player records | 485 |
 | Players with a person block | 46,272 |
 | Players with a resolved club | 39,333 |
-| Parse time (release) | 0.57 s |
-| Parse + SQLite insert | 2.8 s |
+| Parse time (release) | ~1.2 s |
+| Parse + SQLite insert | ~4.4 s |
+| Men / women / unknown gender | 27,544 / 11,789 / 6,940 |
+| Unserved suspensions | 17 |
+| Injury history rows | 783 |
+| Countries resolved from the nation table | 251 save-local ids |
 
 ## Regression test
 
@@ -71,6 +75,7 @@ FM27_TEST_SAVE="/path/to/save.fm" \
   cargo test -p fm27-core --release -- --ignored
 ```
 
-The ignored tests check the counts, Modrić's fields, SQLite query/filter behavior,
-analysis overview, squad depth, wonderkid filtering, full 46,273-row export,
+The ignored tests check the counts, Modrić's fields, nation names, gender split, role scores,
+suspensions, injury history, SQLite query/filter behavior, facet counts, multi-column sorting,
+growth snapshots, analysis overview, squad depth, wonderkid filtering, full 46,273-row export,
 CSV and JSON export.

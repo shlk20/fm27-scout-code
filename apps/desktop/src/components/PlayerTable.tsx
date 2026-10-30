@@ -35,8 +35,7 @@ const OVERVIEW_VISIBILITY: VisibilityState = Object.fromEntries(
 
 export function PlayerTable() {
   const page = usePlayerPage();
-  const sortBy = useAppStore((state) => state.sortBy);
-  const sortDir = useAppStore((state) => state.sortDir);
+  const sort = useAppStore((state) => state.sort);
   const setSort = useAppStore((state) => state.setSort);
   const selectedUid = useAppStore((state) => state.selectedUid);
   const setSelectedUid = useAppStore((state) => state.setSelectedUid);
@@ -102,7 +101,17 @@ export function PlayerTable() {
               <div className="mt-0.5 flex items-center gap-1.5 text-[10px] leading-tight text-[var(--muted)]">
                 <span>{row.original.age ?? "?"} 岁</span>
                 <span className="text-[var(--line-strong)]">·</span>
-                <span>国籍 {row.original.nation_id ?? "—"}</span>
+                <span className="truncate">
+                  {row.original.nation_name ??
+                    (row.original.nation_id != null
+                      ? `国家 #${row.original.nation_id}`
+                      : "国籍未知")}
+                </span>
+                {row.original.gender === 1 && (
+                  <span className="rounded bg-[var(--blue-soft)] px-1 text-[8px] font-semibold text-[var(--blue)]">
+                    女
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -127,6 +136,22 @@ export function PlayerTable() {
         ),
       },
       {
+        id: "status",
+        accessorFn: (row) =>
+          row.injury_status === "injured"
+            ? "injured"
+            : row.suspension_count > 0
+              ? "suspended"
+              : row.on_loan
+                ? "loan"
+                : row.club_uid == null
+                  ? "free"
+                  : "available",
+        header: "状态",
+        size: 66,
+        cell: ({ row }) => <StatusBadges row={row.original} />,
+      },
+      {
         id: "positions",
         accessorFn: (row) => row.positions_text,
         header: "位置",
@@ -135,6 +160,24 @@ export function PlayerTable() {
           <span className="font-mono text-[10px] font-semibold text-[var(--accent-strong)]">
             {row.original.positions_text || "—"}
           </span>
+        ),
+      },
+      {
+        id: "role",
+        accessorFn: (row) => row.best_role_score,
+        header: "最佳角色",
+        size: 116,
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <div className="truncate text-[10px] font-medium text-[var(--ink)]">
+              {row.original.best_role_name ?? "—"}
+            </div>
+            <div className="text-[9px] text-[var(--muted)]">
+              {row.original.best_role_score != null
+                ? `${row.original.best_role_score} / 20 · ${row.original.best_role_position ?? ""}`
+                : "—"}
+            </div>
+          </div>
         ),
       },
       {
@@ -278,6 +321,8 @@ export function PlayerTable() {
     name: "name",
     club: "club",
     positions: "positions",
+    role: "role",
+    status: "injury_status",
     ca: "ca",
     pa: "pa",
     value: "value",
@@ -391,7 +436,8 @@ export function PlayerTable() {
               <tr>
                 {table.getHeaderGroups()[0].headers.map((header) => {
                   const sortKey = sortableIds[header.id];
-                  const active = sortKey === sortBy;
+                  const sortIndex = sortKey ? sort.findIndex((rule) => rule.by === sortKey) : -1;
+                  const activeRule = sortIndex >= 0 ? sort[sortIndex] : null;
                   return (
                     <th
                       key={header.id}
@@ -403,17 +449,25 @@ export function PlayerTable() {
                         sortKey && "cursor-pointer select-none hover:text-[var(--ink)]",
                         "relative",
                       )}
-                      onClick={() => sortKey && setSort(sortKey)}
+                      onClick={(event) => sortKey && setSort(sortKey, event.shiftKey)}
+                      title={sortKey ? "点击排序，Shift+点击加入多列排序" : undefined}
                     >
                       <span className="inline-flex items-center gap-1">
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {sortKey &&
-                          (active ? (
-                            sortDir === "asc" ? (
-                              <ArrowUp size={10} className="text-[var(--accent)]" />
-                            ) : (
-                              <ArrowDown size={10} className="text-[var(--accent)]" />
-                            )
+                          (activeRule ? (
+                            <>
+                              {activeRule.dir === "asc" ? (
+                                <ArrowUp size={10} className="text-[var(--accent)]" />
+                              ) : (
+                                <ArrowDown size={10} className="text-[var(--accent)]" />
+                              )}
+                              {sort.length > 1 && (
+                                <span className="rounded bg-[var(--accent-soft)] px-1 font-mono text-[8px] text-[var(--accent-strong)]">
+                                  {sortIndex + 1}
+                                </span>
+                              )}
+                            </>
                           ) : (
                             <ArrowUpDown size={10} className="opacity-30" />
                           ))}
@@ -511,6 +565,56 @@ export function PlayerTable() {
         </div>
       </div>
     </section>
+  );
+}
+
+function StatusBadges({ row }: { row: PlayerRow }) {
+  const badges: { label: string; tone: string; title?: string }[] = [];
+  if (row.injury_status === "injured") {
+    badges.push({
+      label: "伤",
+      tone: "bg-[var(--danger-soft)] text-[var(--danger)]",
+      title: row.injury_until ? `预计 ${row.injury_until} 复出` : "伤病中",
+    });
+  } else if (row.recent_injury) {
+    badges.push({
+      label: "伤",
+      tone: "bg-[var(--surface-3)] text-[var(--muted)]",
+      title: `最近伤病 ${row.recent_injury}`,
+    });
+  }
+  if (row.suspension_count > 0) {
+    badges.push({
+      label: "停",
+      tone: "bg-[var(--gold-soft)] text-[var(--gold)]",
+      title: `${row.suspension_count} 项停赛`,
+    });
+  }
+  if (row.on_loan) {
+    badges.push({
+      label: "租",
+      tone: "bg-[var(--blue-soft)] text-[var(--blue)]",
+      title: "租借中",
+    });
+  }
+  if (badges.length === 0) {
+    return <span className="text-[10px] text-[var(--line-strong)]">—</span>;
+  }
+  return (
+    <div className="flex items-center gap-0.5">
+      {badges.map((badge) => (
+        <span
+          key={badge.label}
+          title={badge.title}
+          className={cn(
+            "inline-flex h-4 min-w-4 items-center justify-center rounded px-1 text-[9px] font-bold",
+            badge.tone,
+          )}
+        >
+          {badge.label}
+        </span>
+      ))}
+    </div>
   );
 }
 

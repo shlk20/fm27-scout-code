@@ -10,7 +10,9 @@ import type {
   Player,
   PlayerPage,
   PlayerQuery,
+  RoleScore,
   SaveRecord,
+  SnapshotPoint,
   SquadAnalysis,
 } from "./types";
 import {
@@ -20,6 +22,8 @@ import {
   MOCK_SUMMARY,
   mockAnalysisOverview,
   mockFilterOptions,
+  mockGrowthHistory,
+  mockPlayerRoles,
   mockQuery,
   mockSquadAnalysis,
 } from "./mock";
@@ -53,9 +57,28 @@ export async function getPlayer(
   return invoke<Player | null>("get_player", { saveId, uid, includeHidden });
 }
 
-export async function getFilterOptions(saveId: number): Promise<FilterOptions> {
+export async function getFilterOptions(
+  saveId: number,
+  query?: PlayerQuery | null,
+): Promise<FilterOptions> {
   if (!isTauri) return mockFilterOptions();
-  return invoke<FilterOptions>("get_filter_options", { saveId });
+  return invoke<FilterOptions>("get_filter_options", { saveId, query: query ?? null });
+}
+
+export async function getPlayerRoles(
+  saveId: number,
+  uid: number,
+): Promise<RoleScore[]> {
+  if (!isTauri) return mockPlayerRoles(uid);
+  return invoke<RoleScore[]>("player_roles", { saveId, uid });
+}
+
+export async function getGrowthHistory(
+  saveId: number,
+  uid: number,
+): Promise<SnapshotPoint[]> {
+  if (!isTauri) return mockGrowthHistory(uid);
+  return invoke<SnapshotPoint[]>("growth_history", { saveId, uid });
 }
 
 export async function deleteSave(saveId: number): Promise<void> {
@@ -118,10 +141,27 @@ export async function listenParseDone(
   return listen("parse://done", (event) => callback(event.payload));
 }
 
+export interface AppInfo {
+  data_dir: string;
+  version: string;
+  nation_names: number;
+  competition_names: number;
+}
+
+export async function appInfo(): Promise<AppInfo> {
+  if (!isTauri) {
+    return {
+      data_dir: "~/Library/Application Support/com.fm27scout.desktop",
+      version: "0.2.0",
+      nation_names: 208,
+      competition_names: 0,
+    };
+  }
+  return invoke<AppInfo>("app_info");
+}
+
 export async function appDataDir(): Promise<string> {
-  if (!isTauri) return "~/Library/Application Support/com.fm27scout.app";
-  const info = await invoke<{ data_dir: string; version: string }>("app_info");
-  return info.data_dir;
+  return (await appInfo()).data_dir;
 }
 
 export async function listenMenuAction(

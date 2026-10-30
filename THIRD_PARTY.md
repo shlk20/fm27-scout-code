@@ -18,5 +18,9 @@ Each project remains under its own license.
 | [clap](https://github.com/clap-rs/clap) | CLI | MIT / Apache-2.0 |
 | [serde](https://serde.rs/) | JSON | MIT / Apache-2.0 |
 
+`shared/nation-names.csv` is a factual country/region name list keyed by the public editor
+database ids published by the FM community (FM Base, sortitoutsi). It contains no player,
+club, competition or other SI/SEGA database content.
+
 The application does not bundle Sports Interactive or SEGA databases, images, logos,
 or other game assets. It reads only files selected by the user.

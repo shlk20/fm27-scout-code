@@ -34,7 +34,7 @@ The parser validates the declared sizes, caps decompression at 1 GiB per frame a
 
 ## Snapshot policy
 
-The desktop app copies the selected save to `~/Library/Application Support/com.fm27scout.app/snapshots/`
+The desktop app copies the selected save to `~/Library/Application Support/com.fm27scout.desktop/snapshots/`
 before parsing, compares the source size and mtime before/after the copy, and removes the
 snapshot after parsing. This keeps a game that is still writing from being read half-way.
 Stale snapshots are removed on the next launch.
@@ -127,6 +127,41 @@ the registration club remains available in the contract chain.
 
 The anchor scan remains as a fragment fallback. On full saves the counted table is
 required; a framing failure is reported rather than guessed around.
+
+## Nations and club gender
+
+The nation table is a counted table of 251 rows. Each row opens with `0x00`, is walked
+through its fixed and counted sections, and closes with `row_index, database_id, database_id`.
+The database id is the key for `shared/nation-names.csv`; player and club nation fields are
+save-local row indexes.
+
+A club's team list stores its gender byte immediately before the team count. `0` is men,
+`1` is women, and other values are kept raw. Players inherit their club gender; free agents
+stay unknown.
+
+## Injuries and suspensions
+
+`injury_manager` is a four-array, three-list section ending in
+`01 00 00 00 00 00 ff ff`. Array 2 (stride 13) holds expected-return rows; array 3
+(stride 15) holds injury history. Person selectors are `pindex + 1`. The reference save has
+no array-2 rows and 783 history rows.
+
+Suspensions live in `game_db` as 18-byte entries with signature bytes at
+`+4 ff, +5 ff, +13 05, +15 ff, +18 ff`. The issued date is a 4-byte game date at `+9`, the
+scope code at `+14`, and the scope id (competition or nation) at `+16`. An entry belongs to
+the player whose record starts within 30 bytes before it. The reference save has 17 unserved
+bans.
+
+## Snapshots and role scores
+
+Every successful parse writes one `player_snapshots` row per player, keyed by
+`career_key + game_date + player_uid`. `career_key` is the save name, so opening a later state
+of the same career appends points instead of creating an unrelated timeline. Growth queries
+only return points at or before the opened save's game date.
+
+Role scores are computed from display attributes with per-role weights plus a position-fit
+factor; the best role is stored on the player row for the table, while the full role list is
+computed on demand in the inspector.
 
 ## Contracts
 

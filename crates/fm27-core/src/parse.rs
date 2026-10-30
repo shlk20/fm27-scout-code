@@ -20,6 +20,7 @@ use crate::model::{
     Attributes, Club, ParseReport, Player, Positions, Reputation, SaveSummary, TransferValueState,
 };
 use crate::names::NamePools;
+use crate::nations::NationIndex;
 use crate::persons::{ClubLookup, PersonDecoder};
 use crate::player_scan::PlayerRecords;
 
@@ -72,6 +73,7 @@ pub fn parse_save_with_progress(
         message: "正在定位姓名池".to_owned(),
     });
     let names = NamePools::locate(&game_db)?;
+    let nations = NationIndex::read(&game_db).unwrap_or_default();
     progress(ParseProgress {
         stage: "players".to_owned(),
         current: 0,
@@ -85,13 +87,39 @@ pub fn parse_save_with_progress(
         total: 0,
         message: "正在解析俱乐部与球队".to_owned(),
     });
-    let clubs = ClubIndex::read(&game_db)?;
+    let mut clubs = ClubIndex::read(&game_db)?;
+    for club in &mut clubs.clubs {
+        club.nation_name = nations.name_for(club.nation_id as u16).map(str::to_owned);
+        club.fa_nation_name = nations
+            .name_for(club.fa_nation_id as u16)
+            .map(str::to_owned);
+    }
 
     let reference_date = metadata
         .game_date
         .as_deref()
         .and_then(|text| NaiveDate::parse_from_str(text, "%Y-%m-%d").ok())
         .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 7, 1).unwrap());
+
+    let mut injuries = if save.sections.contains_key("injury_manager") {
+        save.read_section("injury_manager")
+            .ok()
+            .map(|section| {
+                crate::injuries::read_injuries(
+                    &section,
+                    &record_index,
+                    &clubs,
+                    metadata
+                        .game_date
+                        .as_deref()
+                        .and_then(|text| NaiveDate::parse_from_str(text, "%Y-%m-%d").ok()),
+                )
+            })
+            .unwrap_or_default()
+    } else {
+        HashMap::new()
+    };
+    let mut suspensions = crate::suspensions::read_suspensions(&game_db, &record_index, &nations);
 
     let club_lookup = ClubLookup {
         name_by_uid: &clubs.name_by_uid,
@@ -138,22 +166,26 @@ pub fn parse_save_with_progress(
             club_name,
             club_short_name,
             club_nation_id,
+            club_nation_name,
             club_fa_nation_id,
             club_reputation,
             club_last_league_position,
             team_slot,
+            gender,
         ) = match team_fields {
             Some((uid, club, slot)) => (
                 Some(uid),
                 Some(club.name.clone()),
                 Some(club.short_name.clone()),
                 Some(club.nation_id),
+                club.nation_name.clone(),
                 Some(club.fa_nation_id),
                 club.reputation,
                 club.last_league_position,
                 Some(slot),
+                club.gender,
             ),
-            None => (None, None, None, None, None, None, None, None),
+            None => (None, None, None, None, None, None, None, None, None, None),
         };
 
         let closing = closing_person_header(
@@ -316,6 +348,10 @@ pub fn parse_save_with_progress(
                 None => (None, None, None, None, None),
             };
 
+        let player_injuries = injuries.remove(&position).unwrap_or_default();
+        let player_suspensions = suspensions.remove(&position).unwrap_or_default();
+        let best_role = crate::roles::best_role(&attributes, &positions);
+
         players.push(Player {
             uid: record.uid,
             unique_id,
@@ -328,6 +364,10 @@ pub fn parse_save_with_progress(
             birth_date: birth_date.map(|date| date.to_string()),
             age,
             nation_id,
+            nation_name: nation_id
+                .and_then(|id| nations.name_for(id))
+                .map(str::to_owned),
+            gender,
             second_nation_ids,
             home_grown_nation_ids,
             home_grown_club_uids,
@@ -341,6 +381,7 @@ pub fn parse_save_with_progress(
             club_name,
             club_short_name,
             club_nation_id,
+            club_nation_name,
             club_fa_nation_id,
             club_reputation,
             club_last_league_position,
@@ -363,6 +404,9 @@ pub fn parse_save_with_progress(
             raw_match_sharpness,
             traits,
             trait_bits,
+            best_role,
+            injuries: player_injuries,
+            suspensions: player_suspensions,
             on_loan,
             loan_parent_club_uid,
             loan_parent_club_name,

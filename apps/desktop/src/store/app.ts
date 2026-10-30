@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { FilterOptions, ParseProgress, SaveSummary } from "@/lib/types";
+import type { FilterOptions, ParseProgress, SaveSummary, SortRule } from "@/lib/types";
 
 export interface AttributeRule {
   id: string;
@@ -12,6 +12,8 @@ export interface Filters {
   search: string;
   clubUids: number[];
   nationIds: number[];
+  genders: number[];
+  availability: string | null;
   ageMin: number | null;
   ageMax: number | null;
   caMin: number | null;
@@ -36,6 +38,8 @@ export const EMPTY_FILTERS: Filters = {
   search: "",
   clubUids: [],
   nationIds: [],
+  genders: [],
+  availability: null,
   ageMin: null,
   ageMax: null,
   caMin: null,
@@ -60,6 +64,7 @@ export interface SavedView {
   id: string;
   name: string;
   filters: Filters;
+  sort?: SortRule[];
 }
 
 export type Theme = "system" | "light" | "dark";
@@ -78,8 +83,7 @@ interface AppState {
   summary: SaveSummary | null;
   filterOptions: FilterOptions | null;
   filters: Filters;
-  sortBy: string;
-  sortDir: "asc" | "desc";
+  sort: SortRule[];
   page: number;
   pageSize: number;
   selectedUid: number | null;
@@ -109,7 +113,8 @@ interface AppState {
   addAttribute: (key: string) => void;
   updateAttribute: (id: string, patch: Partial<AttributeRule>) => void;
   removeAttribute: (id: string) => void;
-  setSort: (by: string) => void;
+  setSort: (by: string, additive?: boolean) => void;
+  setSortRules: (rules: SortRule[]) => void;
   setPage: (page: number) => void;
   setSelectedUid: (uid: number | null) => void;
   toggleCompare: (uid: number) => void;
@@ -138,8 +143,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   summary: null,
   filterOptions: null,
   filters: EMPTY_FILTERS,
-  sortBy: "ca",
-  sortDir: "desc",
+  sort: [{ by: "ca", dir: "desc" }],
   page: 0,
   pageSize: 150,
   selectedUid: null,
@@ -162,6 +166,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       saveId,
       summary,
       filters: EMPTY_FILTERS,
+      sort: [{ by: "ca", dir: "desc" }],
       page: 0,
       selectedUid: null,
       compareUids: [],
@@ -190,6 +195,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: trimmed,
       filters: snapshot,
+      sort: get().sort,
     };
     const savedViews = [...get().savedViews, view].slice(-20);
     persistSavedViews(savedViews);
@@ -203,7 +209,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...EMPTY_FILTERS,
         ...view.filters,
         attributes: view.filters.attributes ?? [],
+        genders: view.filters.genders ?? [],
       },
+      sort: view.sort?.length ? view.sort : [{ by: "ca", dir: "desc" }],
       page: 0,
       selectedUid: null,
     });
@@ -252,12 +260,31 @@ export const useAppStore = create<AppState>((set, get) => ({
       },
       page: 0,
     })),
-  setSort: (by) =>
-    set((state) => ({
-      sortBy: by,
-      sortDir: state.sortBy === by && state.sortDir === "desc" ? "asc" : "desc",
-      page: 0,
-    })),
+  setSort: (by, additive = false) =>
+    set((state) => {
+      if (!additive) {
+        const current = state.sort[0];
+        const dir: "asc" | "desc" =
+          state.sort.length === 1 && current?.by === by && current.dir === "desc"
+            ? "asc"
+            : "desc";
+        const next: SortRule[] = [{ by, dir }];
+        return { sort: next, page: 0 };
+      }
+      const existing = state.sort.find((rule) => rule.by === by);
+      if (existing) {
+        const next: SortRule[] = state.sort.map((rule) => {
+          if (rule.by !== by) return rule;
+          const dir: "asc" | "desc" = rule.dir === "desc" ? "asc" : "desc";
+          return { ...rule, dir };
+        });
+        return { sort: next, page: 0 };
+      }
+      const appended: SortRule = { by, dir: "desc" };
+      const next: SortRule[] = [...state.sort, appended].slice(0, 4);
+      return { sort: next, page: 0 };
+    }),
+  setSortRules: (sort) => set({ sort, page: 0 }),
   setPage: (page) => set({ page }),
   setSelectedUid: (selectedUid) =>
     set({ selectedUid, inspectorOpen: selectedUid != null }),

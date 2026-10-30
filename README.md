@@ -6,7 +6,7 @@ macOS 上的 Football Manager 27 只读球探工具：Tauri 2 + Rust 解析核�
 
 ## 当前状态
 
-第 1 阶段可运行版本已经完成：
+0.2.0 可运行版本已经完成：
 
 - 直接读取 FM27 `27.0.0+2486695` 存档，容器 / zstd / section 目录全部由 Rust 解析。
 - 支持 Finder 双击 / 拖入 `.fm` 文件；解析前先复制只读快照，避免游戏保存中读到半截文件。
@@ -16,9 +16,14 @@ macOS 上的 Football Manager 27 只读球探工具：Tauri 2 + Rust 解析核�
 - 与 Python `fmsave` oracle 全量逐字段对比：**0 差异**。
 - 解析耗时约 **0.57 秒**（release，M 系列 Mac）。
 - SQLite 缓存 + 服务端分页查询；CLI 与桌面 App 共用 `fm27-core`。
-- React UI：筛选、排序、球员详情、2–4 人对比、CSV/JSON 导出、隐藏属性开关、浅色/深色主题。
+- React UI：筛选、多列排序、球员详情、2–4 人对比、CSV/JSON 导出、隐藏属性开关、浅色/深色主题。
 - 分析中心：年龄/CA 分布、俱乐部实力榜、阵容深度、小妖雷达（年龄 + PA + CA 差距）。
-- 快捷筛选：小妖、合同年、高潜、本地保存的自定义视图。
+- 快捷筛选：小妖、合同年、高潜、伤病 / 伤病史 / 停赛 / 租借 / 自由球员 / 可出战。
+- 角色评分：29 个 FM 风格角色按关键属性加权并叠加位置熟练度，详情页显示全部角色与最佳角色。
+- 成长曲线：每次解析按存档名 + 游戏日期写入快照，详情页显示 CA / PA / 身价历史。
+- 性别与名称：解析俱乐部性别（男子 / 女子），内置 208 个国家/地区中文名称表；赛事名称表支持用户 CSV。
+- 筛选联动：俱乐部、国籍、性别、状态计数随当前筛选实时更新。
+- 发布配置：hardened runtime、Developer ID 签名、notarization、Universal Binary 构建脚本与 CI。
 
 真实存档未提交到仓库；开发时通过环境变量指定。
 
@@ -38,12 +43,14 @@ docs/                  布局、解析与验证说明
 已完成本地验证的构建：
 
 ```text
-target/release/bundle/dmg/FM27 Scout_0.1.0_aarch64.dmg   # 3.9 MB
-target/release/bundle/macos/FM27 Scout.app               # 由 --bundles app 生成
+target/universal-apple-darwin/release/bundle/dmg/FM27 Scout_0.2.0_universal.dmg
+target/universal-apple-darwin/release/bundle/macos/FM27 Scout.app
 ```
 
-当前产物为 Apple Silicon（aarch64）。Universal Binary 使用
-`scripts/build-universal.sh` 或 `pnpm tauri build --target universal-apple-darwin`。
+本地开发构建也可以只生成当前架构的 `target/release/bundle`。
+
+Universal Binary / 签名 / 公证使用 `scripts/release-macos.sh`，详见
+[docs/release.md](docs/release.md)。CI 在 `v*` tag 上构建并上传 Universal DMG 与 SHA-256。
 
 ## 开发环境
 
@@ -102,7 +109,8 @@ python3 -m venv .venv
 .venv/bin/python scripts/compare_outputs.py /tmp/oracle.json /tmp/rust.json
 ```
 
-参考结果见 [docs/validation.md](docs/validation.md)。
+参考结果见 [docs/validation.md](docs/validation.md)。名称表格式见
+[docs/name-tables.md](docs/name-tables.md)，发布流程见 [docs/release.md](docs/release.md)。
 
 ## 安全边界
 
@@ -110,22 +118,21 @@ python3 -m venv .venv
 - 不启用 Tauri `shell` / 任意文件系统插件；只使用用户主动选择的文件。
 - 不发起网络请求；CSP 限制本地资源。
 - 隐藏属性默认关闭；开启时提示仅限单机使用。
-- 数据库、日志、快照只写入 `~/Library/Application Support/com.fm27scout.app/`；快照解析后删除。
+- 数据库、日志、快照只写入 `~/Library/Application Support/com.fm27scout.desktop/`；快照解析后删除。
 
 ## 已知限制
 
 - 当前只针对 build `27.0.0+2486695` 做了完整验证；其他 FM27 build 会降级并提示，不猜测字段。
-- 国家/赛事名称尚未内置；国籍暂以 ID 展示。
+- 国家名称已内置；赛事名称不入库，需按 `database_id` 提供 `shared/competition-names.csv`。
+- 当前伤病数据来自 `injury_manager` 的伤病史；该存档没有 FM 的“预计复出”typed 行时，“伤病中”为空，但“伤病史”可用。
 - 合同条款、租借和合同链已解析；少数未观测的 fallback 结构会显式留空。
 - Windows/Linux 暂不构建。
-- macOS Developer ID 签名 / notarization 尚未配置；当前构建为 Apple Silicon（Universal Binary 待第 5 周）。
+- Developer ID 签名 / notarization 已配置脚本与 CI；发布需要自备 Apple Developer 证书和公证凭据。
 
 ## 后续
 
-1. 国家/赛事名称表与中文名称。
-2. 角色评分、成长快照、伤病/停赛/租借视图。
-3. 多列排序、更多无障碍细节与筛选联动完善。
-4. Tauri Updater、Developer ID 签名、notarization、Universal DMG 发布。
+1. 赛事索引与赛事名称联动、Tauri Updater。
+2. 无障碍细节、Intel 实机回归、更多真实存档边界测试。
 
 ## 许可证与归属
 

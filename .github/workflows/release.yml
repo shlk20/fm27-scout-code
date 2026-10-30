@@ -1,4 +1,4 @@
-name: Release DMG
+name: Release Universal DMG
 
 on:
   workflow_dispatch:
@@ -6,9 +6,19 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: macos-14
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -20,6 +30,9 @@ jobs:
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Rust tests
+        run: cargo test -p fm27-core
+
       - name: Install Node
         uses: actions/setup-node@v4
         with:
@@ -28,17 +41,40 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm@12.3.4
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         working-directory: apps/desktop
         run: pnpm install --frozen-lockfile
 
-      - name: Build universal DMG
+      - name: Frontend tests
         working-directory: apps/desktop
-        run: pnpm tauri build --target universal-apple-darwin --bundles dmg
+        run: pnpm test
+
+      - name: Build, sign and notarize Universal DMG
+        working-directory: apps/desktop
+        run: pnpm tauri build --target universal-apple-darwin --bundles app,dmg
+
+      - name: Verify universal binary
+        run: |
+          APP="target/universal-apple-darwin/release/bundle/macos/FM27 Scout.app"
+          BINARY="$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -111 | head -n 1)"
+          lipo -info "$BINARY"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          spctl --assess --type execute --verbose=4 "$APP"
+          xcrun stapler validate "$APP"
+          for dmg in target/universal-apple-darwin/release/bundle/dmg/*.dmg; do
+            xcrun stapler validate "$dmg" || echo "warning: DMG has no stapled ticket (app is notarized)"
+          done
+
+      - name: Checksums
+        run: |
+          DMG_DIR="target/universal-apple-darwin/release/bundle/dmg"
+          shasum -a 256 "$DMG_DIR"/*.dmg | tee "$DMG_DIR/SHA256SUMS.txt"
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4
         with:
-          name: fm27-scout-dmg
-          path: target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          name: fm27-scout-universal-dmg
+          path: |
+            target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            target/universal-apple-darwin/release/bundle/dmg/SHA256SUMS.txt
           if-no-files-found: error

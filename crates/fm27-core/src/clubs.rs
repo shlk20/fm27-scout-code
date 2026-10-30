@@ -37,6 +37,7 @@ struct ClubRecord {
 struct TeamList {
     team_ids: Vec<u32>,
     affiliate_team_ids: Vec<u32>,
+    gender: Option<u8>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -304,7 +305,10 @@ impl ClubIndex {
                 name: record.name.clone(),
                 short_name: record.short_name.clone(),
                 nation_id: record.nation_id,
+                nation_name: None,
                 fa_nation_id: record.fa_nation_id,
+                fa_nation_name: None,
+                gender: team_list.gender,
                 reputation,
                 last_league_position,
                 parent_club_uid: None,
@@ -712,9 +716,13 @@ fn parse_team_list(game_db: &[u8], list_start: usize, record_end: usize) -> Opti
             }
         }
     }
+    let gender = team_count_at
+        .checked_sub(1)
+        .and_then(|at| read_u8(game_db, at));
     Some(TeamList {
         team_ids,
         affiliate_team_ids,
+        gender,
     })
 }
 

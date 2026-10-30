@@ -45,6 +45,35 @@ fn parses_the_reference_career() {
             .and_then(|value| value.end.as_deref()),
         Some("2027-06-30")
     );
+    assert_eq!(modric.nation_name.as_deref(), Some("克罗地亚"));
+    assert_eq!(modric.gender, Some(0));
+    assert!(modric.best_role.is_some());
+
+    assert!(
+        parsed
+            .players
+            .iter()
+            .filter(|player| player.gender == Some(1))
+            .count()
+            > 10_000,
+        "women's players are present"
+    );
+    assert_eq!(
+        parsed
+            .players
+            .iter()
+            .map(|player| player.suspensions.len())
+            .sum::<usize>(),
+        17
+    );
+    assert_eq!(
+        parsed
+            .players
+            .iter()
+            .map(|player| player.injuries.len())
+            .sum::<usize>(),
+        783
+    );
 }
 
 #[test]
@@ -72,6 +101,7 @@ fn caches_queries_and_exports_the_reference_career() {
             .iter()
             .any(|row| row.name.as_deref() == Some("Luka Modrić"))
     );
+    assert!(page.rows.iter().all(|row| row.best_role_score.is_some()));
 
     let attributes = store
         .query_players(&PlayerQuery {
@@ -122,7 +152,66 @@ fn caches_queries_and_exports_the_reference_career() {
     let options = store.filter_options(save_id).expect("filter options");
     assert!(!options.clubs.is_empty());
     assert!(!options.nations.is_empty());
+    assert!(!options.genders.is_empty());
+    assert!(!options.availability.is_empty());
+    assert!(
+        options
+            .nations
+            .iter()
+            .any(|nation| nation.name == "克罗地亚")
+    );
     assert!(options.min_ca.unwrap_or(0) <= options.max_ca.unwrap_or(200));
+
+    let filtered_options = store
+        .filter_options_with_query(
+            save_id,
+            Some(&PlayerQuery {
+                save_id,
+                genders: vec![1],
+                ..PlayerQuery::default()
+            }),
+        )
+        .expect("filtered options");
+    let women_count = filtered_options
+        .genders
+        .iter()
+        .find(|gender| gender.id == 1)
+        .map(|gender| gender.count)
+        .unwrap_or(0);
+    assert!(women_count > 10_000);
+
+    let women = store
+        .query_players(&PlayerQuery {
+            save_id,
+            genders: vec![1],
+            page_size: Some(20),
+            ..PlayerQuery::default()
+        })
+        .expect("women's query");
+    assert!(women.total > 10_000);
+    assert!(women.rows.iter().all(|row| row.gender == Some(1)));
+
+    let multi = store
+        .query_players(&PlayerQuery {
+            save_id,
+            sort: vec![
+                fm27_core::store::SortRule {
+                    by: "ca".to_owned(),
+                    dir: "desc".to_owned(),
+                },
+                fm27_core::store::SortRule {
+                    by: "age".to_owned(),
+                    dir: "asc".to_owned(),
+                },
+            ],
+            page_size: Some(20),
+            ..PlayerQuery::default()
+        })
+        .expect("multi sort");
+    assert!(multi.rows.windows(2).all(|pair| pair[0].ca >= pair[1].ca));
+
+    let history = store.growth_history(save_id, 652912).expect("growth");
+    assert!(!history.is_empty());
 
     let player = store
         .get_player(save_id, 652912, true)

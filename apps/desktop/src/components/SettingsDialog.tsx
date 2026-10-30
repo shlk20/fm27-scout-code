@@ -10,7 +10,7 @@ import {
   Sun,
   Trash2,
 } from "lucide-react";
-import { appDataDir, deleteSave } from "@/lib/api";
+import { appInfo, deleteSave } from "@/lib/api";
 import { useSaves } from "@/lib/query";
 import { formatBytes, relativeTime } from "@/lib/utils";
 import { useAppStore, type DisplayMode, type Theme } from "@/store/app";
@@ -29,11 +29,16 @@ export function SettingsDialog() {
   const currentSaveId = useAppStore((state) => state.saveId);
   const clearSession = useAppStore((state) => state.clearSession);
   const [dataDir, setDataDir] = useState("");
+  const [info, setInfo] = useState<Awaited<ReturnType<typeof appInfo>> | null>(null);
   const { data: saves = [] } = useSaves();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (open) void appDataDir().then(setDataDir);
+    if (!open) return;
+    void appInfo().then((value) => {
+      setInfo(value);
+      setDataDir(value.data_dir);
+    });
   }, [open]);
 
   return (
@@ -170,12 +175,32 @@ export function SettingsDialog() {
 
         <section className="space-y-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            名称表
+          </h3>
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3 text-[10px] leading-relaxed text-[var(--muted)]">
+            <div className="flex items-center justify-between">
+              <span>国家 / 地区名称</span>
+              <span className="font-mono text-[var(--ink)]">{info?.nation_names ?? 0} 项</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between">
+              <span>赛事名称（用户 CSV）</span>
+              <span className="font-mono text-[var(--ink)]">{info?.competition_names ?? 0} 项</span>
+            </div>
+            <p className="mt-2">
+              国家名称随应用内置；赛事名称不入库，可由 `shared/competition-names.csv`
+              以 database_id 为键补充，避免打包游戏受版权保护的数据。
+            </p>
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             关于
           </h3>
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3 text-[10px] leading-relaxed text-[var(--muted)]">
             <div className="flex items-center gap-2 text-[11px] font-semibold text-[var(--ink)]">
               <Info size={13} />
-              FM27 Scout 0.1.0
+              FM27 Scout 0.2.0
             </div>
             <div className="mt-1">
               只读、本地、无网络的 Football Manager 27 球探工具。不会修改存档，不读取游戏内存，不上传任何数据。

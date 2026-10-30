@@ -3,7 +3,8 @@ use std::sync::Mutex;
 
 use fm27_core::export::write_export;
 use fm27_core::store::{
-    AnalysisOverview, FilterOptions, PlayerPage, PlayerQuery, SaveRecord, SquadAnalysis, Store,
+    AnalysisOverview, FilterOptions, PlayerPage, PlayerQuery, SaveRecord, SnapshotPoint,
+    SquadAnalysis, Store,
 };
 use fm27_core::{
     ParseReport, Player, SaveSummary, inspect_save, parse_save_with_progress, parser_version,
@@ -34,6 +35,8 @@ struct OpenSaveResult {
 struct AppInfo {
     version: String,
     data_dir: String,
+    nation_names: usize,
+    competition_names: usize,
 }
 
 fn error_string(error: impl std::fmt::Display) -> String {
@@ -200,6 +203,33 @@ fn get_player(
 }
 
 #[tauri::command]
+fn player_roles(
+    state: State<'_, AppState>,
+    save_id: i64,
+    uid: u32,
+) -> Result<Vec<fm27_core::model::RoleScore>, String> {
+    let store = state.store.lock().map_err(error_string)?;
+    let player = store
+        .get_player(save_id, uid, true)
+        .map_err(error_string)?
+        .ok_or_else(|| "player not found".to_owned())?;
+    Ok(fm27_core::roles::score_roles(
+        &player.attributes,
+        &player.positions,
+    ))
+}
+
+#[tauri::command]
+fn growth_history(
+    state: State<'_, AppState>,
+    save_id: i64,
+    uid: u32,
+) -> Result<Vec<SnapshotPoint>, String> {
+    let store = state.store.lock().map_err(error_string)?;
+    store.growth_history(save_id, uid).map_err(error_string)
+}
+
+#[tauri::command]
 fn analysis_overview(state: State<'_, AppState>, save_id: i64) -> Result<AnalysisOverview, String> {
     let store = state.store.lock().map_err(error_string)?;
     store.analysis_overview(save_id).map_err(error_string)
@@ -218,9 +248,15 @@ fn squad_analysis(
 }
 
 #[tauri::command]
-fn get_filter_options(state: State<'_, AppState>, save_id: i64) -> Result<FilterOptions, String> {
+fn get_filter_options(
+    state: State<'_, AppState>,
+    save_id: i64,
+    query: Option<PlayerQuery>,
+) -> Result<FilterOptions, String> {
     let store = state.store.lock().map_err(error_string)?;
-    store.filter_options(save_id).map_err(error_string)
+    store
+        .filter_options_with_query(save_id, query.as_ref())
+        .map_err(error_string)
 }
 
 #[tauri::command]
@@ -261,6 +297,8 @@ fn app_info(state: State<'_, AppState>) -> AppInfo {
     AppInfo {
         version: env!("CARGO_PKG_VERSION").to_owned(),
         data_dir: state.data_dir.display().to_string(),
+        nation_names: fm27_core::nations::name_count(),
+        competition_names: fm27_core::reference::name_count(),
     }
 }
 
@@ -387,6 +425,8 @@ pub fn run() {
             open_save,
             query_players,
             get_player,
+            player_roles,
+            growth_history,
             analysis_overview,
             squad_analysis,
             get_filter_options,

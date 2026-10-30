@@ -33,6 +33,43 @@ describe("mock player query", () => {
     }
   });
 
+  it("filters gender and status", () => {
+    const women = mockQuery({
+      save_id: MOCK_SAVE_ID,
+      genders: [1],
+      page_size: 500,
+    });
+    expect(women.total).toBeGreaterThan(0);
+    expect(women.rows.every((row) => row.gender === 1)).toBe(true);
+
+    const suspensions = mockQuery({
+      save_id: MOCK_SAVE_ID,
+      availability: "suspended",
+      page_size: 500,
+    });
+    expect(suspensions.total).toBeGreaterThan(0);
+    expect(suspensions.rows.every((row) => row.suspension_count > 0)).toBe(true);
+  });
+
+  it("applies multi-column sort", () => {
+    const page = mockQuery({
+      save_id: MOCK_SAVE_ID,
+      sort: [
+        { by: "ca", dir: "desc" },
+        { by: "age", dir: "asc" },
+      ],
+      page_size: 500,
+    });
+    for (let index = 1; index < page.rows.length; index += 1) {
+      const previous = page.rows[index - 1];
+      const current = page.rows[index];
+      expect(previous.ca).toBeGreaterThanOrEqual(current.ca);
+      if (previous.ca === current.ca) {
+        expect(previous.age ?? 999).toBeLessThanOrEqual(current.age ?? 999);
+      }
+    }
+  });
+
   it("sorts by CA descending and paginates", () => {
     const page = mockQuery({
       save_id: MOCK_SAVE_ID,

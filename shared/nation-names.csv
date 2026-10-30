@@ -1,0 +1,209 @@
+database_id,zh,en
+5,阿尔及利亚,Algeria
+6,安哥拉,Angola
+7,贝宁,Benin
+8,博茨瓦纳,Botswana
+9,布基纳法索,Burkina Faso
+10,布隆迪,Burundi
+11,喀麦隆,Cameroon
+12,佛得角,Cape Verde
+13,中非共和国,Central African Republic
+14,乍得,Chad
+15,吉布提,Djibouti
+16,埃及,Egypt
+17,赤道几内亚,Equatorial Guinea
+18,埃塞俄比亚,Ethiopia
+19,加蓬,Gabon
+20,冈比亚,Gambia
+21,加纳,Ghana
+22,几内亚,Guinea
+23,几内亚比绍,Guinea-Bissau
+24,科特迪瓦,Ivory Coast
+25,肯尼亚,Kenya
+26,莱索托,Lesotho
+27,利比里亚,Liberia
+28,利比亚,Libya
+29,马达加斯加,Madagascar
+30,马拉维,Malawi
+31,马里,Mali
+32,毛里塔尼亚,Mauritania
+33,毛里求斯,Mauritius
+34,摩洛哥,Morocco
+35,莫桑比克,Mozambique
+36,纳米比亚,Namibia
+37,尼日尔,Niger
+38,尼日利亚,Nigeria
+39,卢旺达,Rwanda
+40,圣多美和普林西比,Sao Tome & Principe
+41,塞内加尔,Senegal
+42,塞舌尔,Seychelles
+43,塞拉利昂,Sierra Leone
+44,索马里,Somalia
+45,南非,South Africa
+46,苏丹,Sudan
+47,斯威士兰,Eswatini
+48,坦桑尼亚,Tanzania
+49,刚果,Congo
+50,多哥,Togo
+51,突尼斯,Tunisia
+52,乌干达,Uganda
+53,刚果共和国,Congo
+54,赞比亚,Zambia
+55,津巴布韦,Zimbabwe
+106,阿富汗,Afghanistan
+107,巴林,Bahrain
+108,孟加拉国,Bangladesh
+109,文莱,Brunei
+110,中国,China
+111,中国香港,Hong Kong
+112,印度,India
+113,印度尼西亚,Indonesia
+114,伊朗,Iran
+115,伊拉克,Iraq
+116,日本,Japan
+117,约旦,Jordan
+118,柬埔寨,Cambodia
+119,哈萨克斯坦,Kazakhstan
+120,科威特,Kuwait
+121,吉尔吉斯斯坦,Kyrgyzstan
+122,老挝,Laos
+123,黎巴嫩,Lebanon
+124,中国澳门,Macau
+125,马来西亚,Malaysia
+126,马尔代夫,Maldives
+127,缅甸,Myanmar
+128,尼泊尔,Nepal
+129,朝鲜,North Korea
+130,阿曼,Oman
+131,巴基斯坦,Pakistan
+132,卡塔尔,Qatar
+133,沙特阿拉伯,Saudi Arabia
+134,新加坡,Singapore
+135,韩国,South Korea
+136,斯里兰卡,Sri Lanka
+137,叙利亚,Syria
+138,中国台北,Chinese Taipei
+139,塔吉克斯坦,Tajikistan
+140,泰国,Thailand
+141,菲律宾,Philippines
+142,土库曼斯坦,Turkmenistan
+143,阿联酋,United Arab Emirates
+144,乌兹别克斯坦,Uzbekistan
+145,越南,Vietnam
+146,也门,Yemen
+359,安提瓜和巴布达,Antigua & Barbuda
+360,阿鲁巴,Aruba
+361,巴巴多斯,Barbados
+362,伯利兹,Belize
+363,百慕大,Bermuda
+364,加拿大,Canada
+365,开曼群岛,Cayman Islands
+366,哥斯达黎加,Costa Rica
+367,古巴,Cuba
+368,多米尼克,Dominica
+370,萨尔瓦多,El Salvador
+371,格林纳达,Grenada
+373,危地马拉,Guatemala
+374,圭亚那,Guyana
+375,海地,Haiti
+376,洪都拉斯,Honduras
+377,牙买加,Jamaica
+379,墨西哥,Mexico
+380,荷属安的列斯,Netherlands Antilles
+381,尼加拉瓜,Nicaragua
+382,巴拿马,Panama
+383,波多黎各,Puerto Rico
+384,圣卢西亚,St Lucia
+385,圣基茨和尼维斯,St Kitts & Nevis
+386,圣文森特和格林纳丁斯,St Vincent
+387,苏里南,Surinam
+388,巴哈马,Bahamas
+389,特立尼达和多巴哥,Trinidad & Tobago
+390,美国,United States
+752,阿尔巴尼亚,Albania
+753,安道尔,Andorra
+754,亚美尼亚,Armenia
+755,奥地利,Austria
+756,阿塞拜疆,Azerbaijan
+757,比利时,Belgium
+758,白俄罗斯,Belarus
+759,波黑,Bosnia
+760,保加利亚,Bulgaria
+761,克罗地亚,Croatia
+762,塞浦路斯,Cyprus
+763,捷克,Czech Republic
+764,丹麦,Denmark
+765,英格兰,England
+766,爱沙尼亚,Estonia
+767,法罗群岛,Faroe Islands
+768,芬兰,Finland
+769,法国,France
+770,格鲁吉亚,Georgia
+771,德国,Germany
+772,希腊,Greece
+773,匈牙利,Hungary
+774,冰岛,Iceland
+775,以色列,Israel
+776,意大利,Italy
+777,拉脱维亚,Latvia
+778,列支敦士登,Liechtenstein
+779,立陶宛,Lithuania
+780,卢森堡,Luxembourg
+781,北马其顿,North Macedonia
+782,马耳他,Malta
+783,摩尔多瓦,Moldova
+784,荷兰,Netherlands
+785,北爱尔兰,Northern Ireland
+786,挪威,Norway
+787,波兰,Poland
+788,葡萄牙,Portugal
+789,爱尔兰,Ireland
+790,罗马尼亚,Romania
+791,俄罗斯,Russia
+792,圣马力诺,San Marino
+793,苏格兰,Scotland
+794,斯洛伐克,Slovakia
+795,斯洛文尼亚,Slovenia
+796,西班牙,Spain
+797,瑞典,Sweden
+798,瑞士,Switzerland
+799,土耳其,Turkey
+800,乌克兰,Ukraine
+801,威尔士,Wales
+802,塞尔维亚,Serbia
+1435,澳大利亚,Australia
+1436,库克群岛,Cook Islands
+1437,斐济,Fiji
+1438,新西兰,New Zealand
+1439,巴布亚新几内亚,Papua New Guinea
+1440,所罗门群岛,Solomon Islands
+1441,塔希提,Tahiti
+1442,汤加,Tonga
+1443,瓦努阿图,Vanuatu
+1444,萨摩亚,Samoa
+1649,阿根廷,Argentina
+1650,玻利维亚,Bolivia
+1651,巴西,Brazil
+1652,智利,Chile
+1653,哥伦比亚,Colombia
+1654,厄瓜多尔,Ecuador
+1655,巴拉圭,Paraguay
+1656,秘鲁,Peru
+1657,乌拉圭,Uruguay
+1658,委内瑞拉,Venezuela
+1662,巴勒斯坦,Palestine
+129504,美属萨摩亚,American Samoa
+129505,蒙古,Mongolia
+129508,关岛,Guam
+129511,厄立特里亚,Eritrea
+129514,安圭拉,Anguilla
+129517,英属维尔京群岛,British Virgin Islands
+129520,蒙特塞拉特,Montserrat
+129523,美属维尔京群岛,US Virgin Islands
+129526,特克斯和凯科斯群岛,Turks and Caicos Islands
+129532,新喀里多尼亚,New Caledonia
+131012,不丹,Bhutan
+142527,多米尼加,Dominican Republic
+919586,科摩罗,Comoros
+5626837,东帝汶,East Timor
+62002127,黑山,Montenegro

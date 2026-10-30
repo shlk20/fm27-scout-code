@@ -40,9 +40,9 @@ export function MultiSelect({
 
   const label = useMemo(() => {
     if (selected.length === 0) return placeholder;
-    const names = selected
-      .map((id) => options.find((option) => option.id === id)?.name)
-      .filter(Boolean) as string[];
+    const names = selected.map(
+      (id) => options.find((option) => option.id === id)?.name ?? `#${id}`,
+    );
     if (names.length <= maxLabel) return names.join(", ");
     return `${names.slice(0, maxLabel).join(", ")} +${names.length - maxLabel}`;
   }, [selected, options, placeholder, maxLabel]);

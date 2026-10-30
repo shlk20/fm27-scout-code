@@ -7,6 +7,7 @@ const SHORTCUTS = [
   ["⌘ F", "聚焦搜索"],
   ["⌘ E", "导出当前结果"],
   ["⌘ ,", "打开设置"],
+  ["Shift + 点击列头", "加入多列排序"],
   ["Esc", "关闭弹窗 / 详情"],
 ];
 
@@ -19,7 +20,7 @@ export function HelpDialog() {
       open={open}
       onClose={() => setOpen(false)}
       title="关于与帮助"
-      description="FM27 Scout 0.1.0 · 只读球探工作台"
+      description="FM27 Scout 0.2.0 · 只读球探工作台"
       width="max-w-[620px]"
       footer={
         <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
@@ -91,7 +92,7 @@ export function HelpDialog() {
               <Database size={9} /> 46,273 球员
             </Badge>
             <Badge tone="outline">
-              <LockKeyhole size={9} /> parser 0.1.0
+              <LockKeyhole size={9} /> parser 0.2.0
             </Badge>
             <Badge tone="outline">
               <WifiOff size={9} /> offline

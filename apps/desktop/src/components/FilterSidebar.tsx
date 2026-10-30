@@ -11,7 +11,7 @@ import {
 import { useFilterOptions } from "@/lib/query";
 import { ATTRIBUTE_LABELS, POSITION_LABELS, POSITION_KEYS } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { EMPTY_FILTERS, useAppStore } from "@/store/app";
+import { EMPTY_FILTERS, useAppStore, type Filters } from "@/store/app";
 import { Badge, Button, Checkbox, Input, Label, Select, Switch } from "./ui";
 import { MultiSelect } from "./MultiSelect";
 import { RangeInput } from "./RangeInput";
@@ -58,6 +58,8 @@ export function FilterSidebar() {
     if (filters.search) count++;
     if (filters.clubUids.length) count++;
     if (filters.nationIds.length) count++;
+    if (filters.genders.length) count++;
+    if (filters.availability) count++;
     if (filters.ageMin != null || filters.ageMax != null) count++;
     if (filters.caMin != null || filters.caMax != null) count++;
     if (
@@ -88,6 +90,26 @@ export function FilterSidebar() {
     [hiddenEnabled],
   );
 
+  const presets = useMemo(() => {
+    const gameDate = summary?.game_date ?? "2026-07-13";
+    const options: { label: string; patch: Partial<Filters> }[] = [
+      { label: "全部", patch: {} },
+      { label: "小妖", patch: { ageMax: 21, paMin: 140, paCaGapMin: 10 } },
+      {
+        label: "合同年",
+        patch: {
+          contractEndAfter: gameDate,
+          contractEndBefore: nextYear(gameDate),
+        },
+      },
+      { label: "高潜", patch: { caMin: 140, paMin: 160, ageMax: 23 } },
+    ];
+    return options.map((option) => ({
+      ...option,
+      active: matchesFilters(filters, option.patch),
+    }));
+  }, [filters, summary?.game_date]);
+
   return (
     <aside className="flex h-full w-[252px] shrink-0 flex-col border-r border-[var(--line)] bg-[var(--surface)]/80">
       <div className="flex items-center justify-between border-b border-[var(--line)] px-3 py-2.5">
@@ -114,43 +136,23 @@ export function FilterSidebar() {
 
       <div className="thin-scroll flex-1 space-y-5 overflow-y-auto px-3 py-3.5">
         <section className="grid grid-cols-2 gap-1">
-          {[
-            ["全部", EMPTY_FILTERS],
-            ["小妖", { ageMax: 21, paMin: 140, paCaGapMin: 10 }],
-            ["合同年", {
-              contractEndAfter: summary?.game_date ?? "2026-07-13",
-              contractEndBefore: nextYear(summary?.game_date ?? "2026-07-13"),
-            }],
-            ["高潜", { caMin: 140, paMin: 160, ageMax: 23 }],
-          ].map(([label, preset]) => {
-            const active =
-              label === "小妖"
-                ? filters.ageMax === 21 && filters.paMin === 140 && filters.paCaGapMin === 10
-                : label === "高潜"
-                  ? filters.caMin === 140 && filters.paMin === 160 && filters.ageMax === 23
-                  : false;
-            return (
-              <button
-                key={label as string}
-                type="button"
-                onClick={() => {
-                  if (label === "全部") {
-                    resetFilters();
-                  } else {
-                    resetFilters();
-                    patchFilters(preset as Partial<typeof filters>);
-                  }
-                }}
-                className={
-                  active
-                    ? "rounded-[7px] border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-1.5 text-[10px] font-semibold text-[var(--accent-strong)]"
-                    : "rounded-[7px] border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 text-[10px] text-[var(--muted)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
-                }
-              >
-                {label as string}
-              </button>
-            );
-          })}
+          {presets.map(({ label, patch, active }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => {
+                resetFilters();
+                if (label !== "全部") patchFilters(patch);
+              }}
+              className={
+                active
+                  ? "rounded-[7px] border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-1.5 text-[10px] font-semibold text-[var(--accent-strong)]"
+                  : "rounded-[7px] border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 text-[10px] text-[var(--muted)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+              }
+            >
+              {label}
+            </button>
+          ))}
         </section>
 
         <section className="space-y-1.5">
@@ -251,6 +253,95 @@ export function FilterSidebar() {
             maxLabel={2}
           />
         </section>
+
+        <Section title="性别与状态" icon={<SlidersHorizontal size={12} />}>
+          <div className="grid grid-cols-2 gap-1">
+            {[
+              { ids: [] as number[], label: "全部" },
+              { ids: [0], label: "男子" },
+              { ids: [1], label: "女子" },
+            ].map((option) => {
+              const active =
+                option.ids.length === 0
+                  ? filters.genders.length === 0
+                  : filters.genders.length === option.ids.length &&
+                    option.ids.every((id) => filters.genders.includes(id));
+              const count =
+                option.ids.length === 0
+                  ? options?.genders.reduce((sum, item) => sum + item.count, 0)
+                  : options?.genders
+                      .filter((item) => option.ids.includes(item.id))
+                      .reduce((sum, item) => sum + item.count, 0);
+              return (
+                <button
+                  key={option.label}
+                  type="button"
+                  onClick={() => patchFilters({ genders: option.ids })}
+                  className={cn(
+                    "flex items-center justify-between rounded-[6px] border px-2 py-1.5 text-[10px] transition-colors",
+                    active
+                      ? "border-[var(--accent)] bg-[var(--accent-soft)] font-semibold text-[var(--accent-strong)]"
+                      : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]",
+                  )}
+                >
+                  <span>{option.label}</span>
+                  {count != null && <span className="font-mono text-[9px] opacity-70">{count}</span>}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => patchFilters({ genders: [] })}
+              className="rounded-[6px] border border-dashed border-[var(--line)] px-2 py-1.5 text-[10px] text-[var(--muted)] hover:text-[var(--ink)]"
+            >
+              清除性别
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            {[
+              ["", "全部状态"],
+              ["injured", "伤病中"],
+              ["injury_history", "伤病史"],
+              ["suspended", "停赛"],
+              ["loan", "租借"],
+              ["free", "自由球员"],
+              ["available", "可出战"],
+            ].map(([value, label]) => {
+              const active = (filters.availability ?? "") === value;
+              const statusId = {
+                injured: 1,
+                suspended: 2,
+                loan: 3,
+                free: 4,
+                available: 5,
+                injury_history: 6,
+              }[
+                value as "injured" | "suspended" | "loan" | "free" | "available" | "injury_history"
+              ];
+              const count = value
+                ? options?.availability.find((item) => item.id === statusId)?.count
+                : null;
+              return (
+                <button
+                  key={value || "all"}
+                  type="button"
+                  onClick={() =>
+                    patchFilters({ availability: value || null })
+                  }
+                  className={cn(
+                    "flex items-center justify-between rounded-[6px] border px-2 py-1.5 text-[10px] transition-colors",
+                    active
+                      ? "border-[var(--accent)] bg-[var(--accent-soft)] font-semibold text-[var(--accent-strong)]"
+                      : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]",
+                  )}
+                >
+                  <span>{label}</span>
+                  {count != null && <span className="font-mono text-[9px] opacity-70">{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </Section>
 
         <Section title="年龄与能力" icon={<SlidersHorizontal size={12} />}>
           <RangeInput
@@ -537,4 +628,15 @@ function Section({
 function nextYear(date: string): string {
   const year = Number(date.slice(0, 4));
   return `${year + 1}${date.slice(4)}`;
+}
+
+function matchesFilters(filters: Filters, patch: Partial<Filters>): boolean {
+  return (Object.keys(EMPTY_FILTERS) as (keyof Filters)[]).every((key) => {
+    const expected = (key in patch ? patch[key] : EMPTY_FILTERS[key]) as unknown;
+    const actual = filters[key] as unknown;
+    if (Array.isArray(expected) || Array.isArray(actual)) {
+      return JSON.stringify(actual) === JSON.stringify(expected);
+    }
+    return actual === expected;
+  });
 }

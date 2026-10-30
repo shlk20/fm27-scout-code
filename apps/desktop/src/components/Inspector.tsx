@@ -12,12 +12,14 @@ import {
   LockKeyhole,
   Ruler,
   Shield,
+  ShieldAlert,
   Sparkles,
+  TrendingUp,
   UserRound,
   X,
 } from "lucide-react";
-import { usePlayerDetail } from "@/lib/query";
-import type { Attributes, Player, Positions } from "@/lib/types";
+import { useGrowthHistory, usePlayerDetail, usePlayerRoles } from "@/lib/query";
+import type { Attributes, Player, Positions, RoleScore, SnapshotPoint } from "@/lib/types";
 import {
   ATTRIBUTE_GROUPS,
   ATTRIBUTE_LABELS,
@@ -37,18 +39,21 @@ import { useAppStore } from "@/store/app";
 import { AttributeRadar } from "./AttributeRadar";
 import { Badge, Button, EmptyState, Switch } from "./ui";
 
-type Tab = "attributes" | "hidden" | "positions" | "contract" | "traits";
+type Tab = "attributes" | "roles" | "positions" | "growth" | "hidden" | "contract";
 
 export function Inspector() {
   const selectedUid = useAppStore((state) => state.selectedUid);
   const setSelectedUid = useAppStore((state) => state.setSelectedUid);
   const hiddenEnabled = useAppStore((state) => state.hiddenEnabled);
   const setHiddenEnabled = useAppStore((state) => state.setHiddenEnabled);
+  const gameDate = useAppStore((state) => state.summary?.game_date ?? null);
   const displayMode = useAppStore((state) => state.displayMode);
   const setDisplayMode = useAppStore((state) => state.setDisplayMode);
   const compareUids = useAppStore((state) => state.compareUids);
   const toggleCompare = useAppStore((state) => state.toggleCompare);
   const { data: player, isLoading } = usePlayerDetail(selectedUid);
+  const { data: roleScores } = usePlayerRoles(selectedUid);
+  const { data: growth } = useGrowthHistory(selectedUid);
   const [tab, setTab] = useState<Tab>("attributes");
 
   useEffect(() => {
@@ -123,6 +128,12 @@ export function Inspector() {
                     <span>{player.club_name ?? "自由球员"}</span>
                     <span className="text-[var(--line-strong)]">·</span>
                     <span>{player.age ?? "?"} 岁</span>
+                    <span className="text-[var(--line-strong)]">·</span>
+                    <span>
+                      {player.nation_name ??
+                        (player.nation_id != null ? `国家 #${player.nation_id}` : "国籍未知")}
+                    </span>
+                    {player.gender === 1 && <Badge tone="blue">女子</Badge>}
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-1">
@@ -177,6 +188,28 @@ export function Inspector() {
               <span className="ml-auto font-mono">{player.loan_end ?? ""}</span>
             </div>
           )}
+          {player.injuries.some((injury) => injury.kind === "current") && (
+            <div className="mt-2 flex items-center gap-1.5 rounded-[7px] border border-[var(--danger-soft)] bg-[var(--danger-soft)]/60 px-2 py-1.5 text-[10px] text-[var(--danger)]">
+              <HeartPulse size={11} />
+              <span className="font-semibold">伤病中</span>
+              <span className="ml-auto font-mono">
+                {player.injuries.find((injury) => injury.kind === "current")?.expected_return ?? ""}
+              </span>
+            </div>
+          )}
+          {player.suspensions.length > 0 && (
+            <div className="mt-2 flex items-center gap-1.5 rounded-[7px] border border-[var(--gold-line)] bg-[var(--gold-soft)] px-2 py-1.5 text-[10px] text-[var(--gold)]">
+              <ShieldAlert size={11} />
+              <span className="font-semibold">{player.suspensions.length} 项停赛</span>
+              <span className="ml-auto font-mono">
+                最近{" "}
+                {[...player.suspensions]
+                  .sort((left, right) =>
+                    (right.issued_date ?? "").localeCompare(left.issued_date ?? ""),
+                  )[0]?.issued_date ?? ""}
+              </span>
+            </div>
+          )}
 
           <div className="mt-3 flex items-center justify-between rounded-[7px] border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5">
             <span className="text-[10px] text-[var(--muted)]">显示 1–20 / 原始 1–100</span>
@@ -207,8 +240,10 @@ export function Inspector() {
         <div className="sticky top-0 z-10 flex gap-0.5 border-b border-[var(--line)] bg-[var(--surface)] px-2 py-1.5">
           {[
             ["attributes", "属性"],
-            ["hidden", "隐藏"],
+            ["roles", "角色"],
             ["positions", "位置"],
+            ["growth", "成长"],
+            ["hidden", "隐藏"],
             ["contract", "合同"],
           ].map(([key, label]) => (
             <button
@@ -229,6 +264,15 @@ export function Inspector() {
 
         {tab === "attributes" && (
           <AttributesPanel player={player} attributes={attributes} max={maxValue} />
+        )}
+        {tab === "roles" && (
+          <RolesPanel roles={roleScores ?? []} bestId={player.best_role?.id ?? null} />
+        )}
+        {tab === "growth" && (
+          <GrowthPanel
+            points={growth ?? []}
+            gameDate={gameDate}
+          />
         )}
         {tab === "hidden" && (
           <HiddenPanel
@@ -373,6 +417,13 @@ function HiddenPanel({
   );
 }
 
+const SEVERITY_LABELS: Record<number, string> = {
+  0: "轻微",
+  1: "轻度",
+  2: "中度",
+  3: "重度",
+};
+
 const PERSONALITY_LABELS: Record<string, string> = {
   adaptability: "适应",
   ambition: "雄心",
@@ -383,6 +434,149 @@ const PERSONALITY_LABELS: Record<string, string> = {
   temperament: "气质",
   controversy: "争议",
 };
+
+function RolesPanel({ roles, bestId }: { roles: RoleScore[]; bestId: string | null }) {
+  if (roles.length === 0) {
+    return <div className="px-4 py-6 text-center text-[11px] text-[var(--muted)]">正在计算角色评分…</div>;
+  }
+  const groups = [...new Set(roles.map((role) => role.group))];
+  return (
+    <div className="space-y-4 px-4 py-3">
+      <p className="text-[10px] leading-relaxed text-[var(--muted)]">
+        按 FM 角色关键属性加权，并结合位置熟练度计算。评分 1–20，仅供球探参考。
+      </p>
+      {groups.map((group) => (
+        <div key={group}>
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            {group}
+          </div>
+          <div className="space-y-1.5">
+            {roles
+              .filter((role) => role.group === group)
+              .sort((left, right) => right.score - left.score)
+              .map((role) => {
+                const best = role.id === bestId;
+                return (
+                  <div
+                    key={role.id}
+                    className={cn(
+                      "rounded-[7px] border px-2 py-1.5",
+                      best
+                        ? "border-[var(--accent-line)] bg-[var(--accent-soft)]"
+                        : "border-[var(--line)] bg-[var(--surface-2)]",
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2 text-[10px]">
+                      <span className={cn("truncate", best ? "font-semibold text-[var(--accent-strong)]" : "text-[var(--ink)]")}>
+                        {role.name}
+                      </span>
+                      <span className="shrink-0 font-mono text-[9px] text-[var(--muted)]">
+                        {role.position} {role.position_rating}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-3)]">
+                        <div
+                          className={cn("h-full rounded-full", attributeTone(role.score).split(" ")[0])}
+                          style={{ width: `${Math.max(4, (role.score / 20) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="w-6 text-right font-mono text-[10px] font-semibold text-[var(--ink)]">
+                        {role.score}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function GrowthPanel({ points, gameDate }: { points: SnapshotPoint[]; gameDate: string | null }) {
+  if (points.length < 2) {
+    return (
+      <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+        <TrendingUp size={20} className="text-[var(--muted)]" />
+        <div className="text-xs font-semibold text-[var(--ink)]">还没有成长曲线</div>
+        <p className="max-w-[250px] text-[11px] leading-relaxed text-[var(--muted)]">
+          在游戏里推进日期后再次打开同一存档，就会记录新的 CA / PA / 身价快照。
+          {gameDate ? ` 当前快照日期：${gameDate}。` : ""}
+        </p>
+      </div>
+    );
+  }
+  const width = 320;
+  const height = 132;
+  const pad = 8;
+  const maxY = 200;
+  const x = (index: number) => pad + (index / Math.max(1, points.length - 1)) * (width - pad * 2);
+  const y = (value: number) => height - pad - (value / maxY) * (height - pad * 2);
+  const path = (key: "ca" | "pa") =>
+    points
+      .map((point, index) => {
+        const value = point[key];
+        return value == null ? null : `${index === 0 ? "M" : "L"}${x(index).toFixed(1)},${y(value).toFixed(1)}`;
+      })
+      .filter(Boolean)
+      .join(" ");
+  const first = points[0];
+  const last = points[points.length - 1];
+  const caDelta = (last.ca ?? 0) - (first.ca ?? 0);
+  return (
+    <div className="space-y-3 px-4 py-3">
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2">
+        <div className="mb-1 flex items-center justify-between px-1 text-[9px] text-[var(--muted)]">
+          <span>CA / PA 成长曲线</span>
+          <span className={caDelta >= 0 ? "text-[var(--accent-strong)]" : "text-[var(--danger)]"}>
+            CA {caDelta >= 0 ? "+" : ""}
+            {caDelta}
+          </span>
+        </div>
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label="CA PA 成长曲线">
+          {[100, 140, 180].map((line) => (
+            <g key={line}>
+              <line x1={pad} x2={width - pad} y1={y(line)} y2={y(line)} stroke="var(--line)" strokeWidth="0.5" strokeDasharray="3 3" />
+              <text x={width - pad} y={y(line) - 2} textAnchor="end" fontSize="7" fill="var(--muted)">{line}</text>
+            </g>
+          ))}
+          <path d={path("pa")} fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeDasharray="3 2" />
+          <path d={path("ca")} fill="none" stroke="var(--accent)" strokeWidth="2" />
+          {points.map((point, index) =>
+            point.ca == null ? null : (
+              <circle key={point.game_date} cx={x(index)} cy={y(point.ca)} r="2" fill="var(--accent)" />
+            ),
+          )}
+        </svg>
+        <div className="flex items-center gap-3 px-1 text-[9px] text-[var(--muted)]">
+          <span className="inline-flex items-center gap-1"><span className="h-0.5 w-3 bg-[var(--accent)]" /> CA</span>
+          <span className="inline-flex items-center gap-1"><span className="h-0.5 w-3 bg-[var(--gold)]" /> PA</span>
+          <span className="ml-auto">{first.game_date} → {last.game_date}</span>
+        </div>
+      </div>
+      <div className="space-y-1">
+        { [...points].reverse().map((point) => (
+          <div key={point.game_date} className="flex items-center justify-between rounded-[6px] border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 text-[10px]">
+            <div className="min-w-0">
+              <div className="font-mono text-[var(--ink)]">{point.game_date}</div>
+              <div className="truncate text-[9px] text-[var(--muted)]">{point.club_name ?? "自由球员"}</div>
+            </div>
+            <div className="flex items-center gap-3 font-mono">
+              <span className="text-[var(--accent-strong)]">CA {point.ca ?? "—"}</span>
+              <span className="text-[var(--gold)]">PA {point.pa ?? "—"}</span>
+              <span className="text-[var(--muted)]">{formatValue(point.transfer_value)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="text-[9px] leading-relaxed text-[var(--muted)]">
+        快照以存档名称归组；同一生涯再次打开并解析后会自动追加，不会修改存档。
+      </p>
+    </div>
+  );
+}
 
 function PositionsPanel({ positions }: { positions: Positions }) {
   return (
@@ -458,6 +652,82 @@ function ContractPanel({ player }: { player: Player }) {
           </div>
         </div>
       </div>
+
+      {player.injuries.length > 0 && (
+        <div>
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            伤病史
+          </div>
+          <div className="space-y-1">
+            {[...player.injuries]
+              .sort((left, right) =>
+                (right.date ?? right.expected_return ?? "").localeCompare(
+                  left.date ?? left.expected_return ?? "",
+                ),
+              )
+              .slice(0, 6)
+              .map((injury, index) => (
+                <div
+                  key={`${injury.date ?? injury.expected_return}-${index}`}
+                  className="flex items-center justify-between rounded-[6px] border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 text-[10px]"
+                >
+                  <div className="min-w-0">
+                    <div className="font-mono text-[var(--ink)]">
+                      {injury.kind === "current"
+                        ? `预计 ${injury.expected_return ?? "—"} 复出`
+                        : injury.date ?? "日期未知"}
+                    </div>
+                    <div className="truncate text-[9px] text-[var(--muted)]">
+                      {injury.club_name ?? "未知俱乐部"}
+                      {injury.cause != null
+                        ? ` · ${injury.cause === 1 ? "比赛中" : "训练中"}`
+                        : ""}
+                    </div>
+                  </div>
+                  <Badge tone={injury.severity != null && injury.severity >= 2 ? "danger" : "outline"}>
+                    {injury.severity != null
+                      ? SEVERITY_LABELS[injury.severity] ?? `严重度 ${injury.severity}`
+                      : injury.type_name ?? "伤病"}
+                  </Badge>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {player.suspensions.length > 0 && (
+        <div>
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            停赛
+          </div>
+          <div className="space-y-1">
+            {[...player.suspensions]
+              .sort((left, right) =>
+                (right.issued_date ?? "").localeCompare(left.issued_date ?? ""),
+              )
+              .map((suspension, index) => (
+                <div
+                  key={`${suspension.issued_date}-${index}`}
+                  className="flex items-center justify-between rounded-[6px] border border-[var(--gold-line)] bg-[var(--gold-soft)] px-2 py-1.5 text-[10px]"
+                >
+                  <div>
+                    <div className="font-medium text-[var(--gold)]">
+                      {suspension.scope === "nation"
+                        ? `全国赛事 · ${suspension.nation_name ?? `国家 #${suspension.nation_id}`}`
+                        : suspension.scope === "competition"
+                          ? `单项赛事 #${suspension.competition_id}`
+                          : "范围未知"}
+                    </div>
+                    <div className="text-[9px] opacity-70">
+                      判罚日期 {suspension.issued_date ?? "—"}
+                    </div>
+                  </div>
+                  <span className="font-mono text-[9px] opacity-70">#{suspension.scope_code}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {contract?.on_loan && (
         <div className="rounded-xl border border-[var(--blue-line)] bg-[var(--blue-soft)] p-3 text-[11px] text-[var(--blue)]">

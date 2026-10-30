@@ -2,29 +2,33 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   getAnalysisOverview,
   getFilterOptions,
+  getGrowthHistory,
   getPlayer,
+  getPlayerRoles,
   getSquadAnalysis,
   listSaves,
   queryPlayers,
 } from "./api";
-import type { PlayerQuery } from "./types";
+import type { PlayerQuery, SortRule } from "./types";
 import { useAppStore, type Filters } from "@/store/app";
 
 export function buildPlayerQuery(
   saveId: number,
   filters: Filters,
-  sortBy: string,
-  sortDir: "asc" | "desc",
+  sort: SortRule[],
   page: number,
   pageSize: number,
   includeHidden: boolean,
 ): PlayerQuery {
+  const primary = sort[0];
   return {
     save_id: saveId,
     search: filters.search || null,
     uids: [],
     club_uids: filters.clubUids,
     nation_ids: filters.nationIds,
+    genders: filters.genders,
+    availability: filters.availability,
     age_min: filters.ageMin,
     age_max: filters.ageMax,
     ca_min: filters.caMin,
@@ -48,8 +52,9 @@ export function buildPlayerQuery(
     contract_end_after: filters.contractEndAfter,
     on_loan: filters.onLoan,
     include_hidden: includeHidden,
-    sort_by: sortBy,
-    sort_dir: sortDir,
+    sort,
+    sort_by: primary?.by ?? "ca",
+    sort_dir: primary?.dir ?? "desc",
     page,
     page_size: pageSize,
   };
@@ -66,13 +71,12 @@ export function useSaves() {
 export function usePlayerPage() {
   const saveId = useAppStore((state) => state.saveId);
   const filters = useAppStore((state) => state.filters);
-  const sortBy = useAppStore((state) => state.sortBy);
-  const sortDir = useAppStore((state) => state.sortDir);
+  const sort = useAppStore((state) => state.sort);
   const page = useAppStore((state) => state.page);
   const pageSize = useAppStore((state) => state.pageSize);
   const hiddenEnabled = useAppStore((state) => state.hiddenEnabled);
   const query = saveId
-    ? buildPlayerQuery(saveId, filters, sortBy, sortDir, page, pageSize, hiddenEnabled)
+    ? buildPlayerQuery(saveId, filters, sort, page, pageSize, hiddenEnabled)
     : null;
   return useQuery({
     queryKey: ["players", query],
@@ -89,6 +93,26 @@ export function usePlayerDetail(uid: number | null) {
   return useQuery({
     queryKey: ["player", saveId, uid, hiddenEnabled],
     queryFn: () => getPlayer(saveId!, uid!, hiddenEnabled),
+    enabled: saveId != null && uid != null,
+    staleTime: 60_000,
+  });
+}
+
+export function usePlayerRoles(uid: number | null) {
+  const saveId = useAppStore((state) => state.saveId);
+  return useQuery({
+    queryKey: ["player-roles", saveId, uid],
+    queryFn: () => getPlayerRoles(saveId!, uid!),
+    enabled: saveId != null && uid != null,
+    staleTime: 60_000,
+  });
+}
+
+export function useGrowthHistory(uid: number | null) {
+  const saveId = useAppStore((state) => state.saveId);
+  return useQuery({
+    queryKey: ["growth", saveId, uid],
+    queryFn: () => getGrowthHistory(saveId!, uid!),
     enabled: saveId != null && uid != null,
     staleTime: 60_000,
   });
@@ -116,10 +140,17 @@ export function useSquadAnalysis(clubUid: number | null) {
 
 export function useFilterOptions() {
   const saveId = useAppStore((state) => state.saveId);
+  const filters = useAppStore((state) => state.filters);
+  const sort = useAppStore((state) => state.sort);
+  const hiddenEnabled = useAppStore((state) => state.hiddenEnabled);
+  const query = saveId
+    ? buildPlayerQuery(saveId, filters, sort, 0, 1, hiddenEnabled)
+    : null;
   return useQuery({
-    queryKey: ["filter-options", saveId],
-    queryFn: () => getFilterOptions(saveId!),
+    queryKey: ["filter-options", query],
+    queryFn: () => getFilterOptions(saveId!, query),
     enabled: saveId != null,
-    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
   });
 }

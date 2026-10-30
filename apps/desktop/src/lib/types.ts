@@ -38,6 +38,49 @@ export interface Trait {
   name: string | null;
 }
 
+export interface RoleScore {
+  id: string;
+  name: string;
+  group: string;
+  score: number;
+  position: string;
+  position_rating: number;
+}
+
+export interface Injury {
+  kind: "current" | "history";
+  date: string | null;
+  expected_return: string | null;
+  type_id: number | null;
+  type_name: string | null;
+  cause: number | null;
+  severity: number | null;
+  team_id: number | null;
+  club_uid: number | null;
+  club_name: string | null;
+}
+
+export interface Suspension {
+  scope: "competition" | "nation" | "unknown";
+  scope_code: number;
+  competition_id: number | null;
+  competition_name: string | null;
+  nation_id: number | null;
+  nation_name: string | null;
+  issued_date: string | null;
+}
+
+export interface SnapshotPoint {
+  game_date: string;
+  ca: number | null;
+  pa: number | null;
+  transfer_value: number | null;
+  club_uid: number | null;
+  club_name: string | null;
+  wage: number | null;
+  contract_end: string | null;
+}
+
 export interface Clause {
   kind: number;
   parameter: number | null;
@@ -91,6 +134,8 @@ export interface Player {
   birth_date: string | null;
   age: number | null;
   nation_id: number | null;
+  nation_name: string | null;
+  gender: number | null;
   second_nation_ids: number[];
   home_grown_nation_ids: number[];
   home_grown_club_uids: (number | null)[];
@@ -104,6 +149,7 @@ export interface Player {
   club_name: string | null;
   club_short_name: string | null;
   club_nation_id: number | null;
+  club_nation_name: string | null;
   club_fa_nation_id: number | null;
   club_reputation: number | null;
   club_last_league_position: number | null;
@@ -126,6 +172,9 @@ export interface Player {
   raw_match_sharpness: number;
   traits: Trait[];
   trait_bits: number | null;
+  best_role: RoleScore | null;
+  injuries: Injury[];
+  suspensions: Suspension[];
   on_loan: boolean | null;
   loan_parent_club_uid: number | null;
   loan_parent_club_name: string | null;
@@ -141,6 +190,8 @@ export interface PlayerRow {
   club_uid: number | null;
   club_name: string | null;
   nation_id: number | null;
+  nation_name: string | null;
+  gender: number | null;
   ca: number;
   pa: number | null;
   pa_range_code: number | null;
@@ -157,6 +208,19 @@ export interface PlayerRow {
   right_foot: number | null;
   on_loan: boolean | null;
   traits: Trait[];
+  best_role_id: string | null;
+  best_role_name: string | null;
+  best_role_score: number | null;
+  best_role_position: string | null;
+  injury_status: "injured" | "fit";
+  injury_until: string | null;
+  recent_injury: string | null;
+  suspension_count: number;
+}
+
+export interface SortRule {
+  by: string;
+  dir: "asc" | "desc";
 }
 
 export interface PlayerQuery {
@@ -165,6 +229,8 @@ export interface PlayerQuery {
   uids?: number[];
   club_uids?: number[];
   nation_ids?: number[];
+  genders?: number[];
+  availability?: string | null;
   age_min?: number | null;
   age_max?: number | null;
   ca_min?: number | null;
@@ -184,6 +250,7 @@ export interface PlayerQuery {
   contract_end_after?: string | null;
   on_loan?: boolean | null;
   include_hidden?: boolean;
+  sort?: SortRule[];
   sort_by?: string | null;
   sort_dir?: "asc" | "desc" | null;
   page?: number | null;
@@ -248,6 +315,8 @@ export interface FilterOption {
 export interface FilterOptions {
   clubs: FilterOption[];
   nations: FilterOption[];
+  genders: FilterOption[];
+  availability: FilterOption[];
   min_age: number | null;
   max_age: number | null;
   min_ca: number | null;

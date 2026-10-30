@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build a macOS Universal Binary DMG. Requires both Rust targets.
+# Development-only Universal Binary build (unsigned). For a signed, notarized release use
+# scripts/release-macos.sh.
+
 rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
 cd "$(dirname "$0")/../apps/desktop"

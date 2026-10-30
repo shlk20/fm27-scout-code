@@ -8,7 +8,9 @@ import type {
   PlayerQuery,
   PlayerRow,
   Positions,
+  RoleScore,
   SaveRecord,
+  SnapshotPoint,
   SaveSummary,
   SquadAnalysis,
   Trait,
@@ -45,6 +47,23 @@ const CLUBS: [string, number, number][] = [
   ["Flamengo", 1820, 23],
 ];
 const NATIONS = [135, 150, 164, 139, 173, 168, 181, 138, 156, 177, 11, 23, 70, 216, 126];
+const NATION_NAMES: Record<number, string> = {
+  11: "巴西",
+  23: "阿根廷",
+  70: "克罗地亚",
+  126: "意大利",
+  135: "英格兰",
+  138: "西班牙",
+  139: "苏格兰",
+  150: "德国",
+  156: "法国",
+  164: "葡萄牙",
+  168: "荷兰",
+  173: "比利时",
+  177: "丹麦",
+  181: "瑞典",
+  216: "乌拉圭",
+};
 const POSITION_SETS: [string, string][] = [
   ["MC", "DM"], ["DC", ""], ["STC", ""], ["AML", "AMC"], ["DR", "WBR"],
   ["DL", "WBL"], ["GK", ""], ["AMC", "MC"], ["MR", "AMR"], ["DM", "MC"],
@@ -132,6 +151,8 @@ function buildPlayer(index: number): Player {
     birth_date: index === 0 ? "1985-09-09" : `${2006 - (index % 20)}-0${1 + (index % 9)}-1${index % 9}`,
     age,
     nation_id: nation,
+    nation_name: NATION_NAMES[nation] ?? `国家 #${nation}`,
+    gender: index % 5 === 0 ? 1 : 0,
     second_nation_ids: [],
     home_grown_nation_ids: [nation],
     home_grown_club_uids: [clubUid],
@@ -145,6 +166,7 @@ function buildPlayer(index: number): Player {
     club_name: club,
     club_short_name: club.split(" ")[0],
     club_nation_id: nation,
+    club_nation_name: NATION_NAMES[nation] ?? `国家 #${nation}`,
     club_fa_nation_id: nation,
     club_reputation: 7000,
     club_last_league_position: 1 + (index % 18),
@@ -176,6 +198,45 @@ function buildPlayer(index: number): Player {
     raw_match_sharpness: 7500,
     traits: index % 4 === 0 ? TRAITS : [],
     trait_bits: null,
+    best_role: {
+      id: "central_midfielder",
+      name: "中场（策应）",
+      group: "中场",
+      score: Math.max(1, Math.min(20, Math.round(ca / 9))),
+      position: pos1,
+      position_rating: 20,
+    },
+    injuries:
+      index % 37 === 0
+        ? [
+            {
+              kind: "history",
+              date: "2026-03-14",
+              expected_return: null,
+              type_id: null,
+              type_name: null,
+              cause: 0,
+              severity: 2,
+              team_id: 800 + index,
+              club_uid: clubUid,
+              club_name: club,
+            },
+          ]
+        : [],
+    suspensions:
+      index % 53 === 0
+        ? [
+            {
+              scope: "nation",
+              scope_code: 10,
+              competition_id: null,
+              competition_name: null,
+              nation_id: nation,
+              nation_name: NATION_NAMES[nation] ?? null,
+              issued_date: "2026-07-13",
+            },
+          ]
+        : [],
     on_loan: index % 17 === 0,
     loan_parent_club_uid: index % 17 === 0 ? 728 : null,
     loan_parent_club_name: index % 17 === 0 ? "Tottenham Hotspur" : null,
@@ -251,6 +312,8 @@ export function mockPlayerRow(player: Player): PlayerRow {
     club_uid: player.club_uid,
     club_name: player.club_name,
     nation_id: player.nation_id,
+    nation_name: player.nation_name,
+    gender: player.gender,
     ca: player.ca,
     pa: player.pa,
     pa_range_code: player.pa_range_code,
@@ -267,7 +330,60 @@ export function mockPlayerRow(player: Player): PlayerRow {
     right_foot: player.right_foot,
     on_loan: player.on_loan,
     traits: player.traits,
+    best_role_id: player.best_role?.id ?? null,
+    best_role_name: player.best_role?.name ?? null,
+    best_role_score: player.best_role?.score ?? null,
+    best_role_position: player.best_role?.position ?? null,
+    injury_status: player.injuries.some((injury) => injury.kind === "current")
+      ? "injured"
+      : "fit",
+    injury_until: null,
+    recent_injury: player.injuries.find((injury) => injury.date)?.date ?? null,
+    suspension_count: player.suspensions.length,
   };
+}
+
+export function mockPlayerRoles(uid: number): RoleScore[] {
+  const player = MOCK_PLAYERS.find((item) => item.uid === uid) ?? MOCK_PLAYERS[0];
+  const top = player.best_role?.score ?? 14;
+  return [
+    ["goalkeeper", "门将（防守）", "门将", "GK"],
+    ["central_defender", "中后卫（防守）", "后卫", "DC"],
+    ["wing_back", "翼卫（进攻）", "后卫", "WBL"],
+    ["defensive_midfielder", "防守型中场（防守）", "中场", "DM"],
+    ["deep_lying_playmaker", "后组织核心（策应）", "中场", "MC"],
+    ["box_to_box_midfielder", "全能中场（策应）", "中场", "MC"],
+    ["advanced_playmaker", "前组织核心（进攻）", "中场", "AMC"],
+    ["winger", "边锋（进攻）", "前场", "AML"],
+    ["inside_forward", "内锋（进攻）", "前场", "AMR"],
+    ["trequartista", "九号半（进攻）", "前场", "AMC"],
+    ["advanced_forward", "突前前锋（进攻）", "前锋", "STC"],
+    ["poacher", "抢点前锋（进攻）", "前锋", "STC"],
+  ].map(([id, name, group, position], index) => ({
+    id,
+    name,
+    group,
+    position,
+    score: Math.max(1, Math.min(20, top + ((index * 7) % 9) - 4)),
+    position_rating: 12 + ((index * 3) % 9),
+  }));
+}
+
+export function mockGrowthHistory(uid: number): SnapshotPoint[] {
+  const player = MOCK_PLAYERS.find((item) => item.uid === uid) ?? MOCK_PLAYERS[0];
+  const base = Math.max(60, player.ca - 12);
+  return ["2024-07-01", "2025-01-01", "2025-07-01", "2026-01-01", "2026-07-13"].map(
+    (game_date, index) => ({
+      game_date,
+      ca: Math.min(player.ca, base + index * 3),
+      pa: player.pa,
+      transfer_value: Math.round((player.transfer_value ?? 0) * (0.6 + index * 0.1)),
+      club_uid: player.club_uid,
+      club_name: player.club_name,
+      wage: player.contract?.wage ?? null,
+      contract_end: player.contract?.end ?? null,
+    }),
+  );
 }
 
 export function mockFilterOptions(): FilterOptions {
@@ -292,9 +408,25 @@ export function mockFilterOptions(): FilterOptions {
     clubs: [...clubCounts.values()].sort((a, b) => a.name.localeCompare(b.name)),
     nations: [...nationCounts.entries()].map(([id, count]) => ({
       id,
-      name: `Nation ${id}`,
+      name: NATION_NAMES[id] ?? `国家 #${id}`,
       count,
     })),
+    genders: [
+      { id: 0, name: "男子", count: MOCK_PLAYERS.filter((player) => player.gender === 0).length },
+      { id: 1, name: "女子", count: MOCK_PLAYERS.filter((player) => player.gender === 1).length },
+    ],
+    availability: [
+      { id: 1, name: "伤病", count: 0 },
+      { id: 2, name: "停赛", count: MOCK_PLAYERS.filter((player) => player.suspensions.length > 0).length },
+      { id: 3, name: "租借", count: MOCK_PLAYERS.filter((player) => player.on_loan).length },
+      { id: 4, name: "自由球员", count: 0 },
+      { id: 5, name: "可出战", count: MOCK_PLAYERS.length },
+      {
+        id: 6,
+        name: "伤病史",
+        count: MOCK_PLAYERS.filter((player) => player.injuries.length > 0).length,
+      },
+    ],
     min_age: 16,
     max_age: 40,
     min_ca: 70,
@@ -320,12 +452,22 @@ export function mockQuery(query: PlayerQuery): {
     rows = rows.filter(
       (row) =>
         row.name?.toLowerCase().includes(search) ||
-        row.club_name?.toLowerCase().includes(search),
+        row.club_name?.toLowerCase().includes(search) ||
+        row.nation_name?.toLowerCase().includes(search),
     );
   }
   if (query.uids?.length) rows = rows.filter((row) => query.uids!.includes(row.uid));
   if (query.club_uids?.length) rows = rows.filter((row) => query.club_uids!.includes(row.club_uid ?? -1));
   if (query.nation_ids?.length) rows = rows.filter((row) => query.nation_ids!.includes(row.nation_id ?? -1));
+  if (query.genders?.length) rows = rows.filter((row) => query.genders!.includes(row.gender ?? -1));
+  if (query.availability === "injured") rows = rows.filter((row) => row.injury_status === "injured");
+  if (query.availability === "injury_history") rows = rows.filter((row) => row.recent_injury != null);
+  if (query.availability === "suspended") rows = rows.filter((row) => row.suspension_count > 0);
+  if (query.availability === "loan") rows = rows.filter((row) => row.on_loan === true);
+  if (query.availability === "free") rows = rows.filter((row) => row.club_uid == null);
+  if (query.availability === "available") {
+    rows = rows.filter((row) => row.injury_status !== "injured" && row.suspension_count === 0);
+  }
   if (query.age_min != null) rows = rows.filter((row) => (row.age ?? 0) >= query.age_min!);
   if (query.age_max != null) rows = rows.filter((row) => (row.age ?? 999) <= query.age_max!);
   if (query.ca_min != null) rows = rows.filter((row) => row.ca >= query.ca_min!);
@@ -353,26 +495,37 @@ export function mockQuery(query: PlayerQuery): {
   if (query.wage_min != null) rows = rows.filter((row) => (row.wage ?? 0) >= query.wage_min!);
   if (query.wage_max != null) rows = rows.filter((row) => (row.wage ?? 0) <= query.wage_max!);
   if (query.on_loan != null) rows = rows.filter((row) => row.on_loan === query.on_loan);
-  const sortBy = query.sort_by ?? "ca";
-  const direction = query.sort_dir === "asc" ? 1 : -1;
+  const rules = query.sort?.length
+    ? query.sort
+    : [{ by: query.sort_by ?? "ca", dir: query.sort_dir ?? "desc" }];
   rows.sort((a, b) => {
-    const read = (row: PlayerRow): number | string | null => {
-      switch (sortBy) {
-        case "name": return row.name;
-        case "age": return row.age;
-        case "club": return row.club_name;
-        case "value": return row.transfer_value;
-        case "wage": return row.wage;
-        case "contract_end": return row.contract_end;
-        case "pa": return row.pa;
-        default: return row.ca;
-      }
-    };
-    const left = read(a);
-    const right = read(b);
-    if (left == null) return 1;
-    if (right == null) return -1;
-    return (left > right ? 1 : left < right ? -1 : 0) * direction;
+    for (const rule of rules) {
+      const direction = rule.dir === "asc" ? 1 : -1;
+      const read = (row: PlayerRow): number | string | null => {
+        switch (rule.by) {
+          case "name": return row.name;
+          case "age": return row.age;
+          case "club": return row.club_name;
+          case "nation_name": return row.nation_name;
+          case "gender": return row.gender;
+          case "value": return row.transfer_value;
+          case "wage": return row.wage;
+          case "contract_end": return row.contract_end;
+          case "pa": return row.pa;
+          case "role": return row.best_role_score;
+          case "best_role": return row.best_role_name;
+          default: return row.ca;
+        }
+      };
+      const left = read(a);
+      const right = read(b);
+      if (left == null && right == null) continue;
+      if (left == null) return 1;
+      if (right == null) return -1;
+      const compared = (left > right ? 1 : left < right ? -1 : 0) * direction;
+      if (compared !== 0) return compared;
+    }
+    return 0;
   });
   const total = rows.length;
   const page = query.page ?? 0;

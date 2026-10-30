@@ -527,7 +527,7 @@ parse://error     { message, stage }
 ~/Library/Application Support/Sports Interactive/Football Manager 27/games
 
 应用数据目录：
-~/Library/Application Support/com.fm27scout.app/
+~/Library/Application Support/com.fm27scout.desktop/
 ```
 
 - 启动时扫描存档目录，列出最近存档；同时支持手动选择任意 `.fm` 文件。

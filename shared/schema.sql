@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS saves (
   fingerprint     TEXT NOT NULL,
   game            TEXT NOT NULL,
   build           TEXT NOT NULL,
+  save_name       TEXT NOT NULL DEFAULT '',
+  career_key      TEXT NOT NULL DEFAULT '',
   game_date       TEXT,
   db_version      TEXT,
   parser_version  TEXT NOT NULL,
@@ -30,6 +32,8 @@ CREATE TABLE IF NOT EXISTS players (
   birth_date      TEXT,
   age             INTEGER,
   nation_id       INTEGER,
+  nation_name     TEXT,
+  gender          INTEGER,
   club_uid        INTEGER,
   club_name       TEXT,
   ca              INTEGER,
@@ -46,6 +50,16 @@ CREATE TABLE IF NOT EXISTS players (
   traits_json     TEXT,
   attributes_json TEXT NOT NULL,
   raw_attributes_json TEXT NOT NULL,
+  best_role_id    TEXT,
+  best_role_name  TEXT,
+  best_role_score INTEGER,
+  best_role_position TEXT,
+  injury_status   TEXT NOT NULL DEFAULT 'fit',
+  injury_until    TEXT,
+  recent_injury   TEXT,
+  suspension_count INTEGER NOT NULL DEFAULT 0,
+  injuries_json   TEXT NOT NULL DEFAULT '[]',
+  suspensions_json TEXT NOT NULL DEFAULT '[]',
   contract_end    TEXT,
   wage            INTEGER,
   on_loan         INTEGER,
@@ -62,6 +76,9 @@ CREATE INDEX IF NOT EXISTS players_ca ON players(save_id, ca);
 CREATE INDEX IF NOT EXISTS players_pa ON players(save_id, pa);
 CREATE INDEX IF NOT EXISTS players_value ON players(save_id, transfer_value);
 CREATE INDEX IF NOT EXISTS players_contract_end ON players(save_id, contract_end);
+CREATE INDEX IF NOT EXISTS players_gender ON players(save_id, gender);
+CREATE INDEX IF NOT EXISTS players_injury ON players(save_id, injury_status);
+CREATE INDEX IF NOT EXISTS players_role_score ON players(save_id, best_role_score);
 
 CREATE TABLE IF NOT EXISTS contracts (
   save_id         INTEGER NOT NULL,
@@ -94,7 +111,10 @@ CREATE TABLE IF NOT EXISTS clubs (
   name            TEXT,
   short_name      TEXT,
   nation_id       INTEGER,
+  nation_name     TEXT,
   fa_nation_id    INTEGER,
+  fa_nation_name  TEXT,
+  gender          INTEGER,
   reputation      INTEGER,
   last_league_position INTEGER,
   parent_club_uid INTEGER,
@@ -105,6 +125,27 @@ CREATE TABLE IF NOT EXISTS clubs (
 
 CREATE INDEX IF NOT EXISTS clubs_name ON clubs(save_id, name);
 CREATE INDEX IF NOT EXISTS clubs_nation ON clubs(save_id, nation_id);
+
+-- Career-wide growth history. `career_key` is the save name, so opening the same career at a
+-- later game date adds a point instead of creating an unrelated timeline.
+CREATE TABLE IF NOT EXISTS player_snapshots (
+  career_key      TEXT NOT NULL,
+  game_date       TEXT NOT NULL,
+  player_uid      INTEGER NOT NULL,
+  save_id         INTEGER NOT NULL,
+  ca              INTEGER,
+  pa              INTEGER,
+  transfer_value  INTEGER,
+  club_uid        INTEGER,
+  club_name       TEXT,
+  wage            INTEGER,
+  contract_end    TEXT,
+  recorded_at     TEXT NOT NULL,
+  PRIMARY KEY (career_key, game_date, player_uid)
+);
+
+CREATE INDEX IF NOT EXISTS player_snapshots_player
+  ON player_snapshots(career_key, player_uid, game_date);
 
 CREATE TABLE IF NOT EXISTS snapshots (
   save_id         INTEGER NOT NULL,

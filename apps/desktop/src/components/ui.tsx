@@ -177,8 +177,8 @@ export function Switch({
     >
       <span
         className={cn(
-          "absolute top-[2px] h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-          checked ? "translate-x-[17px]" : "translate-x-[2px]",
+          "absolute left-[1px] top-[2px] h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+          checked ? "translate-x-[18px]" : "translate-x-0",
         )}
       />
     </button>

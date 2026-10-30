@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Download, FileJson, FileSpreadsheet, Loader2 } from "lucide-react";
 import { exportPlayers, pickExportFile } from "@/lib/api";
-import { usePlayerPage } from "@/lib/query";
+import { buildPlayerQuery, usePlayerPage } from "@/lib/query";
 import { useAppStore, EMPTY_FILTERS } from "@/store/app";
 import { Button, Modal } from "./ui";
 
@@ -14,8 +14,7 @@ export function ExportDialog() {
   const saveId = useAppStore((state) => state.saveId);
   const summary = useAppStore((state) => state.summary);
   const filters = useAppStore((state) => state.filters);
-  const sortBy = useAppStore((state) => state.sortBy);
-  const sortDir = useAppStore((state) => state.sortDir);
+  const sort = useAppStore((state) => state.sort);
   const hiddenEnabled = useAppStore((state) => state.hiddenEnabled);
   const selectedUid = useAppStore((state) => state.selectedUid);
   const compareUids = useAppStore((state) => state.compareUids);
@@ -34,49 +33,15 @@ export function ExportDialog() {
 
   const exportNow = async () => {
     if (!saveId) return;
-    let query;
-    if (scope === "all") {
-      query = {
-        save_id: saveId,
-        filters: EMPTY_FILTERS,
-      };
-    } else {
-      query = { save_id: saveId, filters };
-    }
-    const base = {
-      save_id: saveId,
-      uids: scope === "selected" ? selected : [],
-      search: query.filters.search || null,
-      club_uids: query.filters.clubUids,
-      nation_ids: query.filters.nationIds,
-      age_min: query.filters.ageMin,
-      age_max: query.filters.ageMax,
-      ca_min: query.filters.caMin,
-      ca_max: query.filters.caMax,
-      pa_min: query.filters.paMin,
-      pa_max: query.filters.paMax,
-      pa_ca_gap_min: query.filters.paCaGapMin,
-      pa_unknown: query.filters.paUnknown,
-      positions: query.filters.positions,
-      position_min: query.filters.positionMin,
-      attributes: query.filters.attributes.map((rule) => ({
-        key: rule.key,
-        min: rule.min,
-        max: rule.max,
-      })),
-      value_min: query.filters.valueMin,
-      value_max: query.filters.valueMax,
-      wage_min: query.filters.wageMin,
-      wage_max: query.filters.wageMax,
-      contract_end_before: query.filters.contractEndBefore,
-      contract_end_after: query.filters.contractEndAfter,
-      on_loan: query.filters.onLoan,
-      include_hidden: hiddenEnabled,
-      sort_by: sortBy,
-      sort_dir: sortDir,
-      page: 0,
-      page_size: 100000,
-    };
+    const base = buildPlayerQuery(
+      saveId,
+      scope === "all" ? EMPTY_FILTERS : filters,
+      sort,
+      0,
+      100000,
+      hiddenEnabled,
+    );
+    base.uids = scope === "selected" ? selected : [];
     const defaultName = `fm27-${summary?.save_name ?? "players"}-${new Date()
       .toISOString()
       .slice(0, 10)}.${format}`;

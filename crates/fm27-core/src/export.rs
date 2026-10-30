@@ -39,7 +39,11 @@ fn write_csv(path: &Path, rows: &[PlayerRow]) -> Result<()> {
         "age".to_owned(),
         "club".to_owned(),
         "nation_id".to_owned(),
+        "nation_name".to_owned(),
+        "gender".to_owned(),
         "positions".to_owned(),
+        "best_role".to_owned(),
+        "best_role_score".to_owned(),
         "ca".to_owned(),
         "pa".to_owned(),
         "value".to_owned(),
@@ -63,7 +67,15 @@ fn write_csv(path: &Path, rows: &[PlayerRow]) -> Result<()> {
             row.nation_id
                 .map(|value| value.to_string())
                 .unwrap_or_default(),
+            row.nation_name.clone().unwrap_or_default(),
+            row.gender
+                .map(|value| if value == 1 { "women" } else { "men" }.to_owned())
+                .unwrap_or_default(),
             row.positions_text.clone().unwrap_or_default(),
+            row.best_role_name.clone().unwrap_or_default(),
+            row.best_role_score
+                .map(|value| value.to_string())
+                .unwrap_or_default(),
             row.ca.to_string(),
             row.pa.map(|value| value.to_string()).unwrap_or_default(),
             row.transfer_value
