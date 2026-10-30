@@ -205,15 +205,13 @@ impl PersonDecoder<'_> {
                     if !home_grown_nation_ids.contains(&referenced) {
                         home_grown_nation_ids.push(referenced);
                     }
-                } else if key == home_club_key {
-                    if !seen_home_grown_club_refs.contains(&referenced) {
-                        seen_home_grown_club_refs.push(referenced);
-                        let club_uid = self.clubs.uid_by_index.get(&referenced).copied();
-                        let club_name =
-                            club_uid.and_then(|uid| self.clubs.name_by_uid.get(&uid).cloned());
-                        home_grown_club_uids.push(club_uid);
-                        home_grown_club_names.push(club_name);
-                    }
+                } else if key == home_club_key && !seen_home_grown_club_refs.contains(&referenced) {
+                    seen_home_grown_club_refs.push(referenced);
+                    let club_uid = self.clubs.uid_by_index.get(&referenced).copied();
+                    let club_name =
+                        club_uid.and_then(|uid| self.clubs.name_by_uid.get(&uid).cloned());
+                    home_grown_club_uids.push(club_uid);
+                    home_grown_club_names.push(club_name);
                 }
             }
         }

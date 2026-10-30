@@ -383,10 +383,7 @@ fn locate_tail(game_db: &[u8], chain_tag_offset: usize) -> Option<usize> {
         return Some(first);
     }
     for event_count in 1..=ContractLayout::TAIL_MAX_EVENT_COUNT {
-        let Some(candidate) = first.checked_sub(ContractLayout::TAIL_STEP_BYTES * event_count)
-        else {
-            return None;
-        };
+        let candidate = first.checked_sub(ContractLayout::TAIL_STEP_BYTES * event_count)?;
         if tail_matches(game_db, candidate, event_count) {
             return Some(candidate);
         }
@@ -408,9 +405,7 @@ fn tail_matches(game_db: &[u8], tail: usize, expected_event_count: usize) -> boo
 
 fn locate_clause_base(game_db: &[u8], tail: usize) -> Option<(usize, usize)> {
     for count in 0..=ContractLayout::CLAUSE_MAX_COUNT {
-        let Some(base) = tail.checked_sub(ContractLayout::CLAUSE_STEP_BYTES * count) else {
-            return None;
-        };
+        let base = tail.checked_sub(ContractLayout::CLAUSE_STEP_BYTES * count)?;
         let ff_start = base as i64 + ContractLayout::CLAUSE_FF_OFFSET as i64;
         let count_at = base as i64 + ContractLayout::CLAUSE_COUNT_OFFSET as i64;
         if ff_start < 0 || count_at < 0 || count_at as usize >= game_db.len() {
@@ -646,9 +641,7 @@ fn locate_loan_block(
 ) -> Option<(u32, Option<NaiveDate>, Option<NaiveDate>)> {
     let first = chain_tag_offset.checked_sub(ContractLayout::TAIL_BASE_OFFSET)?;
     for count in 0..=ContractLayout::LOAN_BLOCK_MAX_EVENT_COUNT {
-        let Some(block) = first.checked_sub(ContractLayout::TAIL_STEP_BYTES * count) else {
-            return None;
-        };
+        let block = first.checked_sub(ContractLayout::TAIL_STEP_BYTES * count)?;
         let event_count = read_u32(game_db, block + ContractLayout::TAIL_EVENT_COUNT_OFFSET)?;
         if event_count as usize != count {
             continue;

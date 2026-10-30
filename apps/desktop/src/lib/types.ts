@@ -171,6 +171,7 @@ export interface PlayerQuery {
   ca_max?: number | null;
   pa_min?: number | null;
   pa_max?: number | null;
+  pa_ca_gap_min?: number | null;
   pa_unknown?: boolean | null;
   positions?: string[];
   position_min?: number | null;
@@ -257,6 +258,53 @@ export interface FilterOptions {
   max_value: number | null;
   min_wage: number | null;
   max_wage: number | null;
+}
+
+export interface DistributionBand {
+  label: string;
+  count: number;
+}
+
+export interface ClubOverview {
+  club_uid: number;
+  club_name: string;
+  players: number;
+  avg_ca: number;
+  max_ca: number;
+  avg_age: number;
+  total_value: number;
+}
+
+export interface AnalysisOverview {
+  total_players: number;
+  total_clubs: number;
+  average_age: number;
+  median_ca: number;
+  total_value: number;
+  free_agents: number;
+  loanees: number;
+  expiring_contracts: number;
+  game_date: string | null;
+  age_bands: DistributionBand[];
+  ca_bands: DistributionBand[];
+  contract_years: DistributionBand[];
+  top_clubs: ClubOverview[];
+}
+
+export interface SquadAnalysis {
+  club_uid: number;
+  club_name: string;
+  player_count: number;
+  average_age: number;
+  average_ca: number;
+  average_pa: number;
+  total_wage: number;
+  total_value: number;
+  loanees: number;
+  position_groups: DistributionBand[];
+  age_bands: DistributionBand[];
+  contract_years: DistributionBand[];
+  players: PlayerRow[];
 }
 
 export interface OpenSaveResult {

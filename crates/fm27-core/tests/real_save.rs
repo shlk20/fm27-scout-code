@@ -94,6 +94,31 @@ fn caches_queries_and_exports_the_reference_career() {
             .all(|row| row.age.unwrap_or(99) <= 23)
     );
 
+    let overview = store.analysis_overview(save_id).expect("overview");
+    assert_eq!(overview.total_players, 46_273);
+    assert!(!overview.top_clubs.is_empty());
+    assert!(overview.median_ca > 0);
+
+    let wonderkids = store
+        .query_players(&PlayerQuery {
+            save_id,
+            age_max: Some(21),
+            pa_min: Some(140),
+            pa_ca_gap_min: Some(10),
+            page_size: Some(20),
+            ..PlayerQuery::default()
+        })
+        .expect("wonderkids");
+    assert!(wonderkids.total > 0);
+    assert!(wonderkids.rows.iter().all(|row| row.age.unwrap_or(99) <= 21
+        && row.pa.unwrap_or(0) >= 140
+        && row.pa.unwrap_or(0) as i32 - row.ca as i32 >= 10));
+
+    let squad = store.squad_analysis(save_id, 1099).expect("squad");
+    assert_eq!(squad.club_name, "Casciavit Milano");
+    assert!(squad.player_count > 0);
+    assert!(!squad.players.is_empty());
+
     let options = store.filter_options(save_id).expect("filter options");
     assert!(!options.clubs.is_empty());
     assert!(!options.nations.is_empty());

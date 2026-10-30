@@ -55,6 +55,7 @@ export function ExportDialog() {
       ca_max: query.filters.caMax,
       pa_min: query.filters.paMin,
       pa_max: query.filters.paMax,
+      pa_ca_gap_min: query.filters.paCaGapMin,
       pa_unknown: query.filters.paUnknown,
       positions: query.filters.positions,
       position_min: query.filters.positionMin,

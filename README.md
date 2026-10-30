@@ -17,6 +17,8 @@ macOS 上的 Football Manager 27 只读球探工具：Tauri 2 + Rust 解析核�
 - 解析耗时约 **0.57 秒**（release，M 系列 Mac）。
 - SQLite 缓存 + 服务端分页查询；CLI 与桌面 App 共用 `fm27-core`。
 - React UI：筛选、排序、球员详情、2–4 人对比、CSV/JSON 导出、隐藏属性开关、浅色/深色主题。
+- 分析中心：年龄/CA 分布、俱乐部实力榜、阵容深度、小妖雷达（年龄 + PA + CA 差距）。
+- 快捷筛选：小妖、合同年、高潜、本地保存的自定义视图。
 
 真实存档未提交到仓库；开发时通过环境变量指定。
 
@@ -121,9 +123,9 @@ python3 -m venv .venv
 ## 后续
 
 1. 国家/赛事名称表与中文名称。
-2. 角色评分、阵容深度、小妖筛选、成长快照。
-3. 原生菜单与更多无障碍细节完善。
-4. Tauri Updater、Developer ID 签名、notarization、DMG 发布。
+2. 角色评分、成长快照、伤病/停赛/租借视图。
+3. 多列排序、更多无障碍细节与筛选联动完善。
+4. Tauri Updater、Developer ID 签名、notarization、Universal DMG 发布。
 
 ## 许可证与归属
 

@@ -18,6 +18,7 @@ export interface Filters {
   caMax: number | null;
   paMin: number | null;
   paMax: number | null;
+  paCaGapMin: number | null;
   paUnknown: boolean | null;
   positions: string[];
   positionMin: number;
@@ -41,6 +42,7 @@ export const EMPTY_FILTERS: Filters = {
   caMax: null,
   paMin: null,
   paMax: null,
+  paCaGapMin: null,
   paUnknown: null,
   positions: [],
   positionMin: 15,
@@ -54,6 +56,12 @@ export const EMPTY_FILTERS: Filters = {
   onLoan: null,
 };
 
+export interface SavedView {
+  id: string;
+  name: string;
+  filters: Filters;
+}
+
 export type Theme = "system" | "light" | "dark";
 export type DisplayMode = "display" | "raw";
 
@@ -66,6 +74,7 @@ export interface Toast {
 
 interface AppState {
   saveId: number | null;
+  savedViews: SavedView[];
   summary: SaveSummary | null;
   filterOptions: FilterOptions | null;
   filters: Filters;
@@ -82,6 +91,7 @@ interface AppState {
   inspectorOpen: boolean;
   settingsOpen: boolean;
   compareOpen: boolean;
+  analysisOpen: boolean;
   exportOpen: boolean;
   helpOpen: boolean;
   toasts: Toast[];
@@ -92,6 +102,9 @@ interface AppState {
   setFilterOptions: (options: FilterOptions | null) => void;
   patchFilters: (patch: Partial<Filters>) => void;
   resetFilters: () => void;
+  saveView: (name: string) => void;
+  applyView: (id: string) => void;
+  deleteView: (id: string) => void;
   togglePosition: (position: string) => void;
   addAttribute: (key: string) => void;
   updateAttribute: (id: string, patch: Partial<AttributeRule>) => void;
@@ -108,6 +121,7 @@ interface AppState {
   setInspectorOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   setCompareOpen: (open: boolean) => void;
+  setAnalysisOpen: (open: boolean) => void;
   setExportOpen: (open: boolean) => void;
   setHelpOpen: (open: boolean) => void;
   setParsing: (parsing: boolean) => void;
@@ -120,6 +134,7 @@ let toastId = 0;
 
 export const useAppStore = create<AppState>((set, get) => ({
   saveId: null,
+  savedViews: loadSavedViews(),
   summary: null,
   filterOptions: null,
   filters: EMPTY_FILTERS,
@@ -136,6 +151,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   inspectorOpen: true,
   settingsOpen: false,
   compareOpen: false,
+  analysisOpen: false,
   exportOpen: false,
   helpOpen: false,
   toasts: [],
@@ -159,12 +175,44 @@ export const useAppStore = create<AppState>((set, get) => ({
       compareUids: [],
       settingsOpen: false,
       compareOpen: false,
+      analysisOpen: false,
       exportOpen: false,
     }),
   setFilterOptions: (filterOptions) => set({ filterOptions }),
   patchFilters: (patch) =>
     set((state) => ({ filters: { ...state.filters, ...patch }, page: 0 })),
   resetFilters: () => set({ filters: EMPTY_FILTERS, page: 0 }),
+  saveView: (name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const snapshot = JSON.parse(JSON.stringify(get().filters)) as Filters;
+    const view: SavedView = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: trimmed,
+      filters: snapshot,
+    };
+    const savedViews = [...get().savedViews, view].slice(-20);
+    persistSavedViews(savedViews);
+    set({ savedViews });
+  },
+  applyView: (id) => {
+    const view = get().savedViews.find((item) => item.id === id);
+    if (!view) return;
+    set({
+      filters: {
+        ...EMPTY_FILTERS,
+        ...view.filters,
+        attributes: view.filters.attributes ?? [],
+      },
+      page: 0,
+      selectedUid: null,
+    });
+  },
+  deleteView: (id) => {
+    const savedViews = get().savedViews.filter((view) => view.id !== id);
+    persistSavedViews(savedViews);
+    set({ savedViews });
+  },
   togglePosition: (position) =>
     set((state) => {
       const positions = state.filters.positions.includes(position)
@@ -236,6 +284,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setInspectorOpen: (inspectorOpen) => set({ inspectorOpen }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setCompareOpen: (compareOpen) => set({ compareOpen }),
+  setAnalysisOpen: (analysisOpen) => set({ analysisOpen }),
   setExportOpen: (exportOpen) => set({ exportOpen }),
   setHelpOpen: (helpOpen) => set({ helpOpen }),
   setParsing: (parsing) => set({ parsing, parseProgress: parsing ? get().parseProgress : null }),
@@ -253,3 +302,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   dismissToast: (id) =>
     set((state) => ({ toasts: state.toasts.filter((item) => item.id !== id) })),
 }));
+
+const SAVED_VIEWS_KEY = "fm27scout.views.v1";
+
+function loadSavedViews(): SavedView[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SAVED_VIEWS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as SavedView[];
+    return Array.isArray(parsed) ? parsed.filter((view) => view?.id && view?.name && view?.filters) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedViews(views: SavedView[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(views));
+  } catch {
+    // Local storage can be unavailable in hardened webviews; views are non-critical.
+  }
+}

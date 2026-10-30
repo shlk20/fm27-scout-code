@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ChevronDown,
   CircleHelp,
@@ -11,8 +11,8 @@ import {
 import { useFilterOptions } from "@/lib/query";
 import { ATTRIBUTE_LABELS, POSITION_LABELS, POSITION_KEYS } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useAppStore } from "@/store/app";
-import { Badge, Button, Checkbox, Label, Select, Switch } from "./ui";
+import { EMPTY_FILTERS, useAppStore } from "@/store/app";
+import { Badge, Button, Checkbox, Input, Label, Select, Switch } from "./ui";
 import { MultiSelect } from "./MultiSelect";
 import { RangeInput } from "./RangeInput";
 
@@ -44,7 +44,14 @@ export function FilterSidebar() {
   const hiddenEnabled = useAppStore((state) => state.hiddenEnabled);
   const setHiddenEnabled = useAppStore((state) => state.setHiddenEnabled);
   const pushToast = useAppStore((state) => state.pushToast);
+  const summary = useAppStore((state) => state.summary);
+  const savedViews = useAppStore((state) => state.savedViews);
+  const saveView = useAppStore((state) => state.saveView);
+  const applyView = useAppStore((state) => state.applyView);
+  const deleteView = useAppStore((state) => state.deleteView);
   const { data: options } = useFilterOptions();
+  const [savingView, setSavingView] = useState(false);
+  const [viewNameDraft, setViewNameDraft] = useState("");
 
   const activeCount = useMemo(() => {
     let count = 0;
@@ -53,7 +60,13 @@ export function FilterSidebar() {
     if (filters.nationIds.length) count++;
     if (filters.ageMin != null || filters.ageMax != null) count++;
     if (filters.caMin != null || filters.caMax != null) count++;
-    if (filters.paMin != null || filters.paMax != null || filters.paUnknown != null) count++;
+    if (
+      filters.paMin != null ||
+      filters.paMax != null ||
+      filters.paCaGapMin != null ||
+      filters.paUnknown != null
+    )
+      count++;
     if (filters.positions.length) count++;
     if (filters.attributes.length) count += filters.attributes.length;
     if (filters.valueMin != null || filters.valueMax != null) count++;
@@ -100,6 +113,124 @@ export function FilterSidebar() {
       </div>
 
       <div className="thin-scroll flex-1 space-y-5 overflow-y-auto px-3 py-3.5">
+        <section className="grid grid-cols-2 gap-1">
+          {[
+            ["全部", EMPTY_FILTERS],
+            ["小妖", { ageMax: 21, paMin: 140, paCaGapMin: 10 }],
+            ["合同年", {
+              contractEndAfter: summary?.game_date ?? "2026-07-13",
+              contractEndBefore: nextYear(summary?.game_date ?? "2026-07-13"),
+            }],
+            ["高潜", { caMin: 140, paMin: 160, ageMax: 23 }],
+          ].map(([label, preset]) => {
+            const active =
+              label === "小妖"
+                ? filters.ageMax === 21 && filters.paMin === 140 && filters.paCaGapMin === 10
+                : label === "高潜"
+                  ? filters.caMin === 140 && filters.paMin === 160 && filters.ageMax === 23
+                  : false;
+            return (
+              <button
+                key={label as string}
+                type="button"
+                onClick={() => {
+                  if (label === "全部") {
+                    resetFilters();
+                  } else {
+                    resetFilters();
+                    patchFilters(preset as Partial<typeof filters>);
+                  }
+                }}
+                className={
+                  active
+                    ? "rounded-[7px] border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-1.5 text-[10px] font-semibold text-[var(--accent-strong)]"
+                    : "rounded-[7px] border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1.5 text-[10px] text-[var(--muted)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]"
+                }
+              >
+                {label as string}
+              </button>
+            );
+          })}
+        </section>
+
+        <section className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label>我的视图</Label>
+            <button
+              type="button"
+              onClick={() => {
+                setViewNameDraft(`视图 ${savedViews.length + 1}`);
+                setSavingView(true);
+              }}
+              className="rounded px-1 text-[10px] font-medium text-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
+            >
+              + 保存
+            </button>
+          </div>
+          {savingView && (
+            <div className="flex items-center gap-1">
+              <Input
+                autoFocus
+                value={viewNameDraft}
+                onChange={(event) => setViewNameDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && viewNameDraft.trim()) {
+                    saveView(viewNameDraft);
+                    setSavingView(false);
+                    setViewNameDraft("");
+                  }
+                  if (event.key === "Escape") setSavingView(false);
+                }}
+                placeholder="视图名称"
+                className="h-6 flex-1 text-[10px]"
+              />
+              <Button
+                size="sm"
+                className="h-6 px-1.5 text-[10px]"
+                onClick={() => {
+                  if (viewNameDraft.trim()) {
+                    saveView(viewNameDraft);
+                    setSavingView(false);
+                    setViewNameDraft("");
+                  }
+                }}
+              >
+                保存
+              </Button>
+            </div>
+          )}
+          {savedViews.length === 0 ? (
+            <div className="rounded-[6px] border border-dashed border-[var(--line)] px-2 py-1.5 text-[9px] text-[var(--muted)]">
+              保存常用筛选条件，下次一键恢复
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {savedViews.map((view) => (
+                <div
+                  key={view.id}
+                  className="flex items-center gap-1 rounded-[6px] border border-[var(--line)] bg-[var(--surface-2)] px-2 py-1"
+                >
+                  <button
+                    type="button"
+                    onClick={() => applyView(view.id)}
+                    className="min-w-0 flex-1 truncate text-left text-[10px] text-[var(--ink)] hover:text-[var(--accent-strong)]"
+                  >
+                    {view.name}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteView(view.id)}
+                    className="rounded px-0.5 text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--danger)]"
+                    aria-label={`删除视图 ${view.name}`}
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
         <section className="space-y-1.5">
           <Label>俱乐部</Label>
           <MultiSelect
@@ -149,6 +280,22 @@ export function FilterSidebar() {
             placeholderMin="0"
             placeholderMax="200"
           />
+          <div className="flex items-center justify-between gap-2">
+            <Label>PA - CA 差距 ≥</Label>
+            <Input
+              type="number"
+              min={0}
+              max={80}
+              value={filters.paCaGapMin ?? ""}
+              placeholder="0"
+              onChange={(event) =>
+                patchFilters({
+                  paCaGapMin: event.target.value === "" ? null : Number(event.target.value),
+                })
+              }
+              className="h-7 w-16 font-mono text-[10px]"
+            />
+          </div>
           <Checkbox
             checked={filters.paUnknown === true}
             onChange={(checked) => patchFilters({ paUnknown: checked ? true : null })}
@@ -385,4 +532,9 @@ function Section({
       {children}
     </section>
   );
+}
+
+function nextYear(date: string): string {
+  const year = Number(date.slice(0, 4));
+  return `${year + 1}${date.slice(4)}`;
 }

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MOCK_SAVE_ID, mockQuery } from "./mock";
+import {
+  MOCK_PLAYERS,
+  MOCK_SAVE_ID,
+  mockAnalysisOverview,
+  mockQuery,
+  mockSquadAnalysis,
+} from "./mock";
 
 describe("mock player query", () => {
   it("searches name and club", () => {
@@ -39,3 +45,28 @@ describe("mock player query", () => {
     expect(page.rows[0].ca).toBeGreaterThanOrEqual(page.rows[4].ca);
   });
 });
+
+  it("aggregates analysis overview and squad depth", () => {
+    const overview = mockAnalysisOverview();
+    expect(overview.total_players).toBe(MOCK_PLAYERS.length);
+    expect(overview.age_bands.length).toBe(6);
+    expect(overview.top_clubs.length).toBeGreaterThan(0);
+
+    const clubUid = MOCK_PLAYERS[0].club_uid;
+    expect(clubUid).not.toBeNull();
+    const squad = mockSquadAnalysis(clubUid!);
+    expect(squad.player_count).toBeGreaterThan(0);
+    expect(squad.players[0].club_uid).toBe(clubUid);
+  });
+
+  it("applies the PA-CA gap filter", () => {
+    const page = mockQuery({
+      save_id: MOCK_SAVE_ID,
+      pa_ca_gap_min: 10,
+      page_size: 500,
+    });
+    for (const row of page.rows) {
+      expect(row.pa).not.toBeNull();
+      expect((row.pa ?? 0) - row.ca).toBeGreaterThanOrEqual(10);
+    }
+  });

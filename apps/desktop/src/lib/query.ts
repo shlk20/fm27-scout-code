@@ -1,5 +1,12 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { getFilterOptions, getPlayer, listSaves, queryPlayers } from "./api";
+import {
+  getAnalysisOverview,
+  getFilterOptions,
+  getPlayer,
+  getSquadAnalysis,
+  listSaves,
+  queryPlayers,
+} from "./api";
 import type { PlayerQuery } from "./types";
 import { useAppStore, type Filters } from "@/store/app";
 
@@ -24,6 +31,7 @@ export function buildPlayerQuery(
     ca_max: filters.caMax,
     pa_min: filters.paMin,
     pa_max: filters.paMax,
+    pa_ca_gap_min: filters.paCaGapMin,
     pa_unknown: filters.paUnknown,
     positions: filters.positions,
     position_min: filters.positionMin,
@@ -82,6 +90,26 @@ export function usePlayerDetail(uid: number | null) {
     queryKey: ["player", saveId, uid, hiddenEnabled],
     queryFn: () => getPlayer(saveId!, uid!, hiddenEnabled),
     enabled: saveId != null && uid != null,
+    staleTime: 60_000,
+  });
+}
+
+export function useAnalysisOverview(enabled = true) {
+  const saveId = useAppStore((state) => state.saveId);
+  return useQuery({
+    queryKey: ["analysis-overview", saveId],
+    queryFn: () => getAnalysisOverview(saveId!),
+    enabled: saveId != null && enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function useSquadAnalysis(clubUid: number | null) {
+  const saveId = useAppStore((state) => state.saveId);
+  return useQuery({
+    queryKey: ["squad-analysis", saveId, clubUid],
+    queryFn: () => getSquadAnalysis(saveId!, clubUid!),
+    enabled: saveId != null && clubUid != null,
     staleTime: 60_000,
   });
 }

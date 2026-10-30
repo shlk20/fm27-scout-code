@@ -72,4 +72,5 @@ FM27_TEST_SAVE="/path/to/save.fm" \
 ```
 
 The ignored tests check the counts, Modrić's fields, SQLite query/filter behavior,
-full 46,273-row export, CSV and JSON export.
+analysis overview, squad depth, wonderkid filtering, full 46,273-row export,
+CSV and JSON export.

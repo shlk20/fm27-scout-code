@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import type {
+  AnalysisOverview,
   ExportReport,
   FilterOptions,
   OpenSaveResult,
@@ -10,14 +11,17 @@ import type {
   PlayerPage,
   PlayerQuery,
   SaveRecord,
+  SquadAnalysis,
 } from "./types";
 import {
   MOCK_PLAYERS,
   MOCK_SAVE,
   MOCK_SAVE_ID,
   MOCK_SUMMARY,
+  mockAnalysisOverview,
   mockFilterOptions,
   mockQuery,
+  mockSquadAnalysis,
 } from "./mock";
 
 export const isTauri =
@@ -146,4 +150,17 @@ export async function logMessage(message: string): Promise<void> {
   } catch {
     // Diagnostics must never break the UI.
   }
+}
+
+export async function getAnalysisOverview(saveId: number): Promise<AnalysisOverview> {
+  if (!isTauri) return mockAnalysisOverview();
+  return invoke<AnalysisOverview>("analysis_overview", { saveId });
+}
+
+export async function getSquadAnalysis(
+  saveId: number,
+  clubUid: number,
+): Promise<SquadAnalysis> {
+  if (!isTauri) return mockSquadAnalysis(clubUid);
+  return invoke<SquadAnalysis>("squad_analysis", { saveId, clubUid });
 }

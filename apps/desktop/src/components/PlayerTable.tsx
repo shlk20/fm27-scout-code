@@ -65,7 +65,7 @@ export function PlayerTable() {
       {
         id: "compare",
         header: "",
-        size: 34,
+        size: 30,
         cell: ({ row }) => (
           <button
             type="button"
@@ -89,7 +89,7 @@ export function PlayerTable() {
         id: "name",
         accessorFn: (row) => row.name,
         header: "球员",
-        size: 248,
+        size: 224,
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface-2)] text-[9px] font-bold text-[var(--muted)]">
@@ -112,7 +112,7 @@ export function PlayerTable() {
         id: "club",
         accessorFn: (row) => row.club_name,
         header: "俱乐部",
-        size: 188,
+        size: 154,
         cell: ({ row }) => (
           <div className="min-w-0">
             <div className="truncate text-[11px] font-medium text-[var(--ink)]">
@@ -130,7 +130,7 @@ export function PlayerTable() {
         id: "positions",
         accessorFn: (row) => row.positions_text,
         header: "位置",
-        size: 92,
+        size: 78,
         cell: ({ row }) => (
           <span className="font-mono text-[10px] font-semibold text-[var(--accent-strong)]">
             {row.original.positions_text || "—"}
@@ -141,7 +141,7 @@ export function PlayerTable() {
         id: "ca",
         accessorFn: (row) => row.ca,
         header: "CA",
-        size: 50,
+        size: 42,
         cell: ({ row }) => (
           <span
             className={cn(
@@ -157,7 +157,7 @@ export function PlayerTable() {
         id: "pa",
         accessorFn: (row) => row.pa,
         header: "PA",
-        size: 50,
+        size: 42,
         cell: ({ row }) => (
           <span className="font-mono text-[11px] font-semibold text-[var(--muted)]">
             {row.original.pa != null ? row.original.pa : row.original.pa_range_code != null ? "?" : "—"}
@@ -168,7 +168,7 @@ export function PlayerTable() {
         id: "value",
         accessorFn: (row) => row.transfer_value,
         header: "身价",
-        size: 84,
+        size: 76,
         cell: ({ row }) => (
           <span className="whitespace-nowrap font-mono text-[11px] tabular-nums text-[var(--ink)]">
             {formatValue(row.original.transfer_value)}
@@ -179,7 +179,7 @@ export function PlayerTable() {
         id: "wage",
         accessorFn: (row) => row.wage,
         header: "周薪",
-        size: 96,
+        size: 82,
         cell: ({ row }) => (
           <span className="whitespace-nowrap font-mono text-[10px] tabular-nums text-[var(--muted)]">
             {row.original.wage != null ? formatWage(row.original.wage) : "—"}
@@ -190,7 +190,7 @@ export function PlayerTable() {
         id: "contract",
         accessorFn: (row) => row.contract_end,
         header: "合同到期",
-        size: 92,
+        size: 80,
         cell: ({ row }) => (
           <span
             className={cn(
@@ -208,7 +208,7 @@ export function PlayerTable() {
         id: "height",
         accessorFn: (row) => row.height_cm,
         header: "身高",
-        size: 60,
+        size: 56,
         cell: ({ row }) => (
           <span className="font-mono text-[10px] text-[var(--muted)]">
             {row.original.height_cm ? `${row.original.height_cm} cm` : "—"}
@@ -219,7 +219,7 @@ export function PlayerTable() {
         id: "foot",
         accessorFn: (row) => row.left_foot,
         header: "脚",
-        size: 50,
+        size: 46,
         cell: ({ row }) => (
           <span className="font-mono text-[10px] text-[var(--muted)]">
             {row.original.left_foot != null && row.original.right_foot != null

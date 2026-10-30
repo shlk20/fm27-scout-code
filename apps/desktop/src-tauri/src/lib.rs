@@ -2,7 +2,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use fm27_core::export::write_export;
-use fm27_core::store::{FilterOptions, PlayerPage, PlayerQuery, SaveRecord, Store};
+use fm27_core::store::{
+    AnalysisOverview, FilterOptions, PlayerPage, PlayerQuery, SaveRecord, SquadAnalysis, Store,
+};
 use fm27_core::{
     ParseReport, Player, SaveSummary, inspect_save, parse_save_with_progress, parser_version,
 };
@@ -198,6 +200,24 @@ fn get_player(
 }
 
 #[tauri::command]
+fn analysis_overview(state: State<'_, AppState>, save_id: i64) -> Result<AnalysisOverview, String> {
+    let store = state.store.lock().map_err(error_string)?;
+    store.analysis_overview(save_id).map_err(error_string)
+}
+
+#[tauri::command]
+fn squad_analysis(
+    state: State<'_, AppState>,
+    save_id: i64,
+    club_uid: u32,
+) -> Result<SquadAnalysis, String> {
+    let store = state.store.lock().map_err(error_string)?;
+    store
+        .squad_analysis(save_id, club_uid)
+        .map_err(error_string)
+}
+
+#[tauri::command]
 fn get_filter_options(state: State<'_, AppState>, save_id: i64) -> Result<FilterOptions, String> {
     let store = state.store.lock().map_err(error_string)?;
     store.filter_options(save_id).map_err(error_string)
@@ -278,6 +298,13 @@ fn install_menu(app: &tauri::App) -> tauri::Result<()> {
         true,
         Some("CmdOrCtrl+Shift+C"),
     )?;
+    let analysis = MenuItem::with_id(
+        handle,
+        "analysis",
+        "分析中心",
+        true,
+        Some("CmdOrCtrl+Shift+A"),
+    )?;
     let undo = PredefinedMenuItem::undo(handle, Some("撤销"))?;
     let redo = PredefinedMenuItem::redo(handle, Some("重做"))?;
     let cut = PredefinedMenuItem::cut(handle, Some("剪切"))?;
@@ -316,7 +343,7 @@ fn install_menu(app: &tauri::App) -> tauri::Result<()> {
         handle,
         "视图",
         true,
-        &[&sidebar, &inspector, &sep5, &hidden, &compare],
+        &[&sidebar, &inspector, &sep5, &hidden, &compare, &analysis],
     )?;
     let help_menu = Submenu::with_items(handle, "帮助", true, &[&helper])?;
     let menu = Menu::with_items(
@@ -360,6 +387,8 @@ pub fn run() {
             open_save,
             query_players,
             get_player,
+            analysis_overview,
+            squad_analysis,
             get_filter_options,
             delete_save,
             export_players,

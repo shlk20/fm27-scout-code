@@ -1,8 +1,9 @@
 //! SQLite cache and query layer. The UI never sees the save bytes or the database path.
 
+use std::collections::HashMap;
 use std::path::Path;
 
-use chrono::Utc;
+use chrono::{Months, NaiveDate, Utc};
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 use serde::{Deserialize, Serialize};
@@ -42,6 +43,8 @@ pub struct PlayerQuery {
     pub ca_max: Option<u16>,
     pub pa_min: Option<u16>,
     pub pa_max: Option<u16>,
+    /// Minimum (potential - current) ability gap, used by the wonderkid view.
+    pub pa_ca_gap_min: Option<u16>,
     pub pa_unknown: Option<bool>,
     pub positions: Vec<String>,
     pub position_min: Option<u8>,
@@ -92,6 +95,57 @@ pub struct PlayerPage {
     pub page: u32,
     pub page_size: u32,
     pub rows: Vec<PlayerRow>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DistributionBand {
+    pub label: String,
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ClubOverview {
+    pub club_uid: u32,
+    pub club_name: String,
+    pub players: u64,
+    pub avg_ca: f64,
+    pub max_ca: u16,
+    pub avg_age: f64,
+    pub total_value: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AnalysisOverview {
+    pub total_players: u64,
+    pub total_clubs: u64,
+    pub average_age: f64,
+    pub median_ca: u16,
+    pub total_value: u64,
+    pub free_agents: u64,
+    pub loanees: u64,
+    pub expiring_contracts: u64,
+    pub game_date: Option<String>,
+    pub age_bands: Vec<DistributionBand>,
+    pub ca_bands: Vec<DistributionBand>,
+    pub contract_years: Vec<DistributionBand>,
+    pub top_clubs: Vec<ClubOverview>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SquadAnalysis {
+    pub club_uid: u32,
+    pub club_name: String,
+    pub player_count: u64,
+    pub average_age: f64,
+    pub average_ca: f64,
+    pub average_pa: f64,
+    pub total_wage: u64,
+    pub total_value: u64,
+    pub loanees: u64,
+    pub position_groups: Vec<DistributionBand>,
+    pub age_bands: Vec<DistributionBand>,
+    pub contract_years: Vec<DistributionBand>,
+    pub players: Vec<PlayerRow>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -464,6 +518,245 @@ impl Store {
             .and_then(|player| player.contract))
     }
 
+    pub fn analysis_overview(&self, save_id: i64) -> Result<AnalysisOverview> {
+        let game_date_text: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT game_date FROM saves WHERE id = ?1",
+                params![save_id],
+                |row| row.get(0),
+            )
+            .optional()?
+            .flatten();
+        let game_date = game_date_text
+            .as_deref()
+            .and_then(|text| NaiveDate::parse_from_str(text, "%Y-%m-%d").ok());
+        let cutoff = game_date.and_then(|date| date.checked_add_months(Months::new(12)));
+        let total_clubs: u64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM clubs WHERE save_id = ?1",
+            params![save_id],
+            |row| row.get(0),
+        )?;
+
+        let mut statement = self.conn.prepare(
+            "SELECT p.age, p.ca, p.pa, p.transfer_value, p.club_uid, p.club_name,
+                    c.end_date, c.on_loan
+             FROM players p
+             LEFT JOIN contracts c ON c.save_id = p.save_id AND c.player_uid = p.uid
+             WHERE p.save_id = ?1",
+        )?;
+        let rows = statement.query_map(params![save_id], |row| {
+            Ok((
+                row.get::<_, Option<i32>>(0)?,
+                row.get::<_, u16>(1)?,
+                row.get::<_, Option<i16>>(2)?,
+                row.get::<_, Option<u32>>(3)?,
+                row.get::<_, Option<u32>>(4)?,
+                row.get::<_, Option<String>>(5)?,
+                row.get::<_, Option<String>>(6)?,
+                row.get::<_, Option<bool>>(7)?,
+            ))
+        })?;
+
+        let mut player_count = 0u64;
+        let mut age_sum = 0i64;
+        let mut age_count = 0u64;
+        let mut ca_values = Vec::new();
+        let mut total_value = 0u64;
+        let mut free_agents = 0u64;
+        let mut loanees = 0u64;
+        let mut expiring = 0u64;
+        let mut age_counts: HashMap<&'static str, u64> = HashMap::new();
+        let mut ca_counts: HashMap<&'static str, u64> = HashMap::new();
+        let mut contract_years: HashMap<u16, u64> = HashMap::new();
+        let mut clubs: HashMap<u32, (String, u64, u64, u16, u64, u64)> = HashMap::new();
+
+        for row in rows {
+            let (age, ca, _pa, value, club_uid, club_name, contract_end, on_loan) = row?;
+            player_count += 1;
+            if let Some(age) = age {
+                age_sum += age as i64;
+                age_count += 1;
+                *age_counts.entry(age_band_label(age)).or_default() += 1;
+            }
+            if ca > 0 {
+                ca_values.push(ca);
+                *ca_counts.entry(ca_band_label(ca)).or_default() += 1;
+            }
+            if let Some(value) = value {
+                total_value += value as u64;
+            }
+            if club_uid.is_none() {
+                free_agents += 1;
+            }
+            if on_loan == Some(true) {
+                loanees += 1;
+            }
+            if let (Some(end), Some(cutoff)) = (contract_end.as_deref(), cutoff) {
+                if end <= cutoff.format("%Y-%m-%d").to_string().as_str()
+                    && game_date
+                        .is_none_or(|start| end >= start.format("%Y-%m-%d").to_string().as_str())
+                {
+                    expiring += 1;
+                }
+            }
+            if let Some(year) = contract_end.as_deref().and_then(contract_year) {
+                *contract_years.entry(year).or_default() += 1;
+            }
+            if let (Some(uid), Some(name)) = (club_uid, club_name) {
+                let entry = clubs.entry(uid).or_insert((name, 0, 0, 0, 0, 0));
+                entry.1 += 1;
+                entry.2 += ca as u64;
+                entry.3 = entry.3.max(ca);
+                if let Some(age) = age {
+                    entry.4 += age as u64;
+                }
+                if let Some(value) = value {
+                    entry.5 += value as u64;
+                }
+            }
+        }
+
+        ca_values.sort_unstable();
+        let median_ca = ca_values.get(ca_values.len() / 2).copied().unwrap_or(0);
+        let mut top_clubs: Vec<ClubOverview> = clubs
+            .into_iter()
+            .filter(|(_, (_, players, _, _, _, _))| *players >= 10)
+            .map(
+                |(club_uid, (club_name, players, ca_sum, max_ca, age_sum, value))| ClubOverview {
+                    club_uid,
+                    club_name,
+                    players,
+                    avg_ca: round1(ca_sum as f64 / players as f64),
+                    max_ca,
+                    avg_age: round1(age_sum as f64 / players as f64),
+                    total_value: value,
+                },
+            )
+            .collect();
+        top_clubs.sort_by(|left, right| {
+            right
+                .avg_ca
+                .total_cmp(&left.avg_ca)
+                .then_with(|| right.players.cmp(&left.players))
+        });
+        top_clubs.truncate(12);
+
+        Ok(AnalysisOverview {
+            total_players: player_count,
+            total_clubs,
+            average_age: round1(age_sum as f64 / age_count.max(1) as f64),
+            median_ca,
+            total_value,
+            free_agents,
+            loanees,
+            expiring_contracts: expiring,
+            game_date: game_date_text,
+            age_bands: distribution(&AGE_BANDS, &age_counts),
+            ca_bands: distribution(&CA_BANDS, &ca_counts),
+            contract_years: contract_year_bands(contract_years),
+            top_clubs,
+        })
+    }
+
+    pub fn squad_analysis(&self, save_id: i64, club_uid: u32) -> Result<SquadAnalysis> {
+        let page = self.query_players(&PlayerQuery {
+            save_id,
+            club_uids: vec![club_uid],
+            page_size: Some(500),
+            sort_by: Some("ca".to_owned()),
+            sort_dir: Some("desc".to_owned()),
+            ..PlayerQuery::default()
+        })?;
+        let club_name: String = self
+            .conn
+            .query_row(
+                "SELECT name FROM clubs WHERE save_id = ?1 AND uid = ?2",
+                params![save_id, club_uid],
+                |row| row.get(0),
+            )
+            .optional()?
+            .unwrap_or_else(|| {
+                page.rows
+                    .first()
+                    .and_then(|row| row.club_name.clone())
+                    .unwrap_or_else(|| format!("Club {club_uid}"))
+            });
+
+        let mut age_sum = 0i64;
+        let mut age_count = 0u64;
+        let mut ca_sum = 0u64;
+        let mut pa_sum = 0u64;
+        let mut pa_count = 0u64;
+        let mut total_wage = 0u64;
+        let mut total_value = 0u64;
+        let mut loanees = 0u64;
+        let mut age_counts: HashMap<&'static str, u64> = HashMap::new();
+        let mut contract_years: HashMap<u16, u64> = HashMap::new();
+        let mut position_counts: HashMap<&'static str, u64> = HashMap::new();
+
+        for player in &page.rows {
+            if let Some(age) = player.age {
+                age_sum += age as i64;
+                age_count += 1;
+                *age_counts.entry(age_band_label(age)).or_default() += 1;
+            }
+            ca_sum += player.ca as u64;
+            if let Some(pa) = player.pa {
+                pa_sum += pa as u64;
+                pa_count += 1;
+            }
+            if let Some(wage) = player.wage {
+                total_wage += wage as u64;
+            }
+            if let Some(value) = player.transfer_value {
+                total_value += value as u64;
+            }
+            if player.on_loan == Some(true) {
+                loanees += 1;
+            }
+            if let Some(year) = player.contract_end.as_deref().and_then(contract_year) {
+                *contract_years.entry(year).or_default() += 1;
+            }
+            let positions = &player.positions;
+            let rating = |key: &str| positions.get(key).unwrap_or(0);
+            if rating("gk") >= 15 {
+                *position_counts.entry("门将").or_default() += 1;
+            }
+            if ["dl", "dc", "dr", "wbl", "wbr"]
+                .iter()
+                .any(|key| rating(key) >= 15)
+            {
+                *position_counts.entry("后卫").or_default() += 1;
+            }
+            if ["dm", "ml", "mc", "mr"].iter().any(|key| rating(key) >= 15) {
+                *position_counts.entry("中场").or_default() += 1;
+            }
+            if ["stc", "aml", "amc", "amr"]
+                .iter()
+                .any(|key| rating(key) >= 15)
+            {
+                *position_counts.entry("前锋").or_default() += 1;
+            }
+        }
+
+        Ok(SquadAnalysis {
+            club_uid,
+            club_name,
+            player_count: page.rows.len() as u64,
+            average_age: round1(age_sum as f64 / age_count.max(1) as f64),
+            average_ca: round1(ca_sum as f64 / page.rows.len().max(1) as f64),
+            average_pa: round1(pa_sum as f64 / pa_count.max(1) as f64),
+            total_wage,
+            total_value,
+            loanees,
+            position_groups: distribution(&SQUAD_GROUPS, &position_counts),
+            age_bands: distribution(&AGE_BANDS, &age_counts),
+            contract_years: contract_year_bands(contract_years),
+            players: page.rows,
+        })
+    }
+
     pub fn filter_options(&self, save_id: i64) -> Result<FilterOptions> {
         let mut club_stmt = self.conn.prepare(
             "SELECT club_uid, club_name, COUNT(*) FROM players
@@ -584,6 +877,10 @@ fn build_where(query: &PlayerQuery, params: &mut Vec<Value>) -> Result<String> {
     add_range(query.age_min, query.age_max, "p.age", params, &mut clauses);
     add_range(query.ca_min, query.ca_max, "p.ca", params, &mut clauses);
     add_range(query.pa_min, query.pa_max, "p.pa", params, &mut clauses);
+    if let Some(gap) = query.pa_ca_gap_min {
+        clauses.push("(p.pa - p.ca) >= ?".to_owned());
+        params.push(Value::Integer(gap as i64));
+    }
     if let Some(unknown) = query.pa_unknown {
         clauses.push(if unknown {
             "p.pa_range_code IS NOT NULL".to_owned()
@@ -719,6 +1016,65 @@ fn order_by(query: &PlayerQuery) -> String {
     format!(
         "ORDER BY CASE WHEN {expression} IS NULL THEN 1 ELSE 0 END, {expression} {direction}, p.uid"
     )
+}
+
+const AGE_BANDS: [&str; 6] = ["≤17", "18–21", "22–25", "26–29", "30–33", "34+"];
+const CA_BANDS: [&str; 6] = ["<100", "100–119", "120–139", "140–159", "160–179", "180+"];
+const SQUAD_GROUPS: [&str; 4] = ["门将", "后卫", "中场", "前锋"];
+
+fn round1(value: f64) -> f64 {
+    (value * 10.0).round() / 10.0
+}
+
+fn age_band_label(age: i32) -> &'static str {
+    match age {
+        ..=17 => "≤17",
+        18..=21 => "18–21",
+        22..=25 => "22–25",
+        26..=29 => "26–29",
+        30..=33 => "30–33",
+        _ => "34+",
+    }
+}
+
+fn ca_band_label(ca: u16) -> &'static str {
+    match ca {
+        0..=99 => "<100",
+        100..=119 => "100–119",
+        120..=139 => "120–139",
+        140..=159 => "140–159",
+        160..=179 => "160–179",
+        _ => "180+",
+    }
+}
+
+fn distribution(
+    labels: &[&'static str],
+    counts: &HashMap<&'static str, u64>,
+) -> Vec<DistributionBand> {
+    labels
+        .iter()
+        .map(|label| DistributionBand {
+            label: (*label).to_owned(),
+            count: counts.get(label).copied().unwrap_or(0),
+        })
+        .collect()
+}
+
+fn contract_year(end: &str) -> Option<u16> {
+    end.get(0..4)?.parse().ok()
+}
+
+fn contract_year_bands(years: HashMap<u16, u64>) -> Vec<DistributionBand> {
+    let mut years: Vec<(u16, u64)> = years.into_iter().collect();
+    years.sort_unstable_by_key(|(year, _)| *year);
+    years
+        .into_iter()
+        .map(|(year, count)| DistributionBand {
+            label: year.to_string(),
+            count,
+        })
+        .collect()
 }
 
 pub fn summary_from_parse(parsed: &ParsedSave) -> SaveSummary {

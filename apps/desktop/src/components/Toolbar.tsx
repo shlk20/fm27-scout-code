@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  BarChart3,
   ChevronDown,
   Database,
   Download,
@@ -31,6 +32,7 @@ export function Toolbar() {
   const setHiddenEnabled = useAppStore((state) => state.setHiddenEnabled);
   const compareUids = useAppStore((state) => state.compareUids);
   const setCompareOpen = useAppStore((state) => state.setCompareOpen);
+  const setAnalysisOpen = useAppStore((state) => state.setAnalysisOpen);
   const setExportOpen = useAppStore((state) => state.setExportOpen);
   const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
   const setHelpOpen = useAppStore((state) => state.setHelpOpen);
@@ -225,6 +227,16 @@ export function Toolbar() {
           )}
         </Button>
         <div className="mx-0.5 h-4 w-px bg-[var(--line)]" />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8"
+          onClick={() => setAnalysisOpen(true)}
+          title="分析中心"
+        >
+          <BarChart3 size={13} />
+          <span className="hidden xl:inline">分析</span>
+        </Button>
         <Button
           variant="ghost"
           size="icon"

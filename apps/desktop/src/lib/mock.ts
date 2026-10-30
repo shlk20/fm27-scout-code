@@ -1,5 +1,8 @@
 import type {
+  AnalysisOverview,
   Attributes,
+  ClubOverview,
+  DistributionBand,
   FilterOptions,
   Player,
   PlayerQuery,
@@ -7,6 +10,7 @@ import type {
   Positions,
   SaveRecord,
   SaveSummary,
+  SquadAnalysis,
   Trait,
 } from "./types";
 
@@ -328,6 +332,9 @@ export function mockQuery(query: PlayerQuery): {
   if (query.ca_max != null) rows = rows.filter((row) => row.ca <= query.ca_max!);
   if (query.pa_min != null) rows = rows.filter((row) => (row.pa ?? 0) >= query.pa_min!);
   if (query.pa_max != null) rows = rows.filter((row) => (row.pa ?? 999) <= query.pa_max!);
+  if (query.pa_ca_gap_min != null) {
+    rows = rows.filter((row) => row.pa != null && row.pa - row.ca >= query.pa_ca_gap_min!);
+  }
   if (query.pa_unknown === true) rows = rows.filter((row) => row.pa_range_code != null);
   if (query.positions?.length) {
     const threshold = query.position_min ?? 15;
@@ -375,5 +382,129 @@ export function mockQuery(query: PlayerQuery): {
     page,
     page_size: pageSize,
     rows: rows.slice(page * pageSize, (page + 1) * pageSize),
+  };
+}
+
+
+function bandLabels<T>(values: T[], label: (value: T) => string, order: string[]): DistributionBand[] {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    const key = label(value);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return order.map((key) => ({ label: key, count: counts.get(key) ?? 0 }));
+}
+
+function mockAgeLabel(age: number): string {
+  if (age <= 17) return "≤17";
+  if (age <= 21) return "18–21";
+  if (age <= 25) return "22–25";
+  if (age <= 29) return "26–29";
+  if (age <= 33) return "30–33";
+  return "34+";
+}
+
+function mockCaLabel(ca: number): string {
+  if (ca < 100) return "<100";
+  if (ca < 120) return "100–119";
+  if (ca < 140) return "120–139";
+  if (ca < 160) return "140–159";
+  if (ca < 180) return "160–179";
+  return "180+";
+}
+
+function roundOne(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+export function mockAnalysisOverview(): AnalysisOverview {
+  const ages = MOCK_PLAYERS.map((player) => player.age).filter((age): age is number => age != null);
+  const ca = MOCK_PLAYERS.map((player) => player.ca).sort((a, b) => a - b);
+  const clubs = new Map<number, ClubOverview>();
+  for (const player of MOCK_PLAYERS) {
+    if (player.club_uid == null || !player.club_name) continue;
+    const entry = clubs.get(player.club_uid) ?? {
+      club_uid: player.club_uid,
+      club_name: player.club_name,
+      players: 0,
+      avg_ca: 0,
+      max_ca: 0,
+      avg_age: 0,
+      total_value: 0,
+    };
+    entry.players += 1;
+    entry.avg_ca += player.ca;
+    entry.max_ca = Math.max(entry.max_ca, player.ca);
+    entry.avg_age += player.age ?? 0;
+    entry.total_value += player.transfer_value ?? 0;
+    clubs.set(player.club_uid, entry);
+  }
+  const topClubs = [...clubs.values()]
+    .map((club) => ({
+      ...club,
+      avg_ca: roundOne(club.avg_ca / club.players),
+      avg_age: roundOne(club.avg_age / club.players),
+    }))
+    .sort((left, right) => right.avg_ca - left.avg_ca)
+    .slice(0, 12);
+  const contractYears = new Map<string, number>();
+  for (const player of MOCK_PLAYERS) {
+    const year = player.contract?.end?.slice(0, 4);
+    if (year) contractYears.set(year, (contractYears.get(year) ?? 0) + 1);
+  }
+  return {
+    total_players: MOCK_PLAYERS.length,
+    total_clubs: new Set(MOCK_PLAYERS.map((player) => player.club_uid)).size,
+    average_age: roundOne(ages.reduce((sum, age) => sum + age, 0) / Math.max(1, ages.length)),
+    median_ca: ca[Math.floor(ca.length / 2)] ?? 0,
+    total_value: MOCK_PLAYERS.reduce((sum, player) => sum + (player.transfer_value ?? 0), 0),
+    free_agents: MOCK_PLAYERS.filter((player) => player.club_uid == null).length,
+    loanees: MOCK_PLAYERS.filter((player) => player.on_loan).length,
+    expiring_contracts: MOCK_PLAYERS.filter(
+      (player) => player.contract?.end != null && player.contract.end <= "2027-07-13",
+    ).length,
+    game_date: "2026-07-13",
+    age_bands: bandLabels(ages, mockAgeLabel, ["≤17", "18–21", "22–25", "26–29", "30–33", "34+"]),
+    ca_bands: bandLabels(ca, mockCaLabel, ["<100", "100–119", "120–139", "140–159", "160–179", "180+"]),
+    contract_years: [...contractYears.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([label, count]) => ({ label, count })),
+    top_clubs: topClubs,
+  };
+}
+
+export function mockSquadAnalysis(clubUid: number): SquadAnalysis {
+  const players = MOCK_PLAYERS.filter((player) => player.club_uid === clubUid);
+  const rows = players.map(mockPlayerRow);
+  const ages = rows.map((row) => row.age).filter((age): age is number => age != null);
+  const pa = rows.map((row) => row.pa).filter((value): value is number => value != null);
+  const contractYears = new Map<string, number>();
+  for (const row of rows) {
+    const year = row.contract_end?.slice(0, 4);
+    if (year) contractYears.set(year, (contractYears.get(year) ?? 0) + 1);
+  }
+  const positionGroups = ["门将", "后卫", "中场", "前锋"].map((label) => ({ label, count: 0 }));
+  for (const row of rows) {
+    if (row.positions.gk >= 15) positionGroups[0].count += 1;
+    if ([row.positions.dl, row.positions.dc, row.positions.dr, row.positions.wbl, row.positions.wbr].some((rating) => rating >= 15)) positionGroups[1].count += 1;
+    if ([row.positions.dm, row.positions.ml, row.positions.mc, row.positions.mr].some((rating) => rating >= 15)) positionGroups[2].count += 1;
+    if ([row.positions.stc, row.positions.aml, row.positions.amc, row.positions.amr].some((rating) => rating >= 15)) positionGroups[3].count += 1;
+  }
+  return {
+    club_uid: clubUid,
+    club_name: players[0]?.club_name ?? `Club ${clubUid}`,
+    player_count: rows.length,
+    average_age: roundOne(ages.reduce((sum, age) => sum + age, 0) / Math.max(1, ages.length)),
+    average_ca: roundOne(rows.reduce((sum, row) => sum + row.ca, 0) / Math.max(1, rows.length)),
+    average_pa: roundOne(pa.reduce((sum, value) => sum + value, 0) / Math.max(1, pa.length)),
+    total_wage: rows.reduce((sum, row) => sum + (row.wage ?? 0), 0),
+    total_value: rows.reduce((sum, row) => sum + (row.transfer_value ?? 0), 0),
+    loanees: rows.filter((row) => row.on_loan).length,
+    position_groups: positionGroups,
+    age_bands: bandLabels(ages, mockAgeLabel, ["≤17", "18–21", "22–25", "26–29", "30–33", "34+"]),
+    contract_years: [...contractYears.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([label, count]) => ({ label, count })),
+    players: rows.sort((a, b) => b.ca - a.ca),
   };
 }

@@ -6,6 +6,7 @@ import { Inspector } from "./components/Inspector";
 import { Toolbar } from "./components/Toolbar";
 import { Onboarding } from "./components/Onboarding";
 import { CompareDialog } from "./components/CompareDialog";
+import { AnalysisDialog } from "./components/AnalysisDialog";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { ExportDialog } from "./components/ExportDialog";
 import { HelpDialog } from "./components/HelpDialog";
@@ -24,6 +25,7 @@ export default function App() {
   const setExportOpen = useAppStore((state) => state.setExportOpen);
   const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
   const setCompareOpen = useAppStore((state) => state.setCompareOpen);
+  const setAnalysisOpen = useAppStore((state) => state.setAnalysisOpen);
   const setHelpOpen = useAppStore((state) => state.setHelpOpen);
   const compareOpen = useAppStore((state) => state.compareOpen);
   const settingsOpen = useAppStore((state) => state.settingsOpen);
@@ -169,6 +171,9 @@ export default function App() {
         case "compare":
           if (useAppStore.getState().compareUids.length >= 2) setCompareOpen(true);
           break;
+        case "analysis":
+          setAnalysisOpen(true);
+          break;
         case "help":
           setHelpOpen(true);
           break;
@@ -180,6 +185,7 @@ export default function App() {
   }, [
     chooseAndOpen,
     pushToast,
+    setAnalysisOpen,
     setCompareOpen,
     setExportOpen,
     setHelpOpen,
@@ -204,6 +210,7 @@ export default function App() {
         )}
       </div>
       <CompareDialog />
+      <AnalysisDialog />
       <SettingsDialog />
       <ExportDialog />
       <HelpDialog />
