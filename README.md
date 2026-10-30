@@ -1,74 +1,76 @@
+English | [中文](README.zh-CN.md)
+
 # FM27 Scout
 
-macOS 上的 Football Manager 27 只读球探工具：Tauri 2 + Rust 解析核心 + React/TypeScript UI。
+A read-only Football Manager 27 scouting tool for macOS: Tauri 2 + Rust parsing core + React/TypeScript UI.
 
-> 非官方工具，与 Sports Interactive / SEGA 无关。只读存档，不修改游戏，不联网，不上传任何数据。
+> Unofficial tool, not affiliated with Sports Interactive / SEGA. Saves are read-only; the game is never modified, and no data is sent over the network or uploaded anywhere.
 
-## 当前状态
+## Current status
 
-0.2.0 可运行版本已经完成：
+The 0.2.0 runnable release is complete:
 
-- 直接读取 FM27 `27.0.0+2486695` 存档，容器 / zstd / section 目录全部由 Rust 解析。
-- 支持 Finder 双击 / 拖入 `.fm` 文件；解析前先复制只读快照，避免游戏保存中读到半截文件。
-- 球员：46,273 条记录，含属性、隐藏属性、CA/PA、位置、性格、习惯、合同、身价、状态。
-- 俱乐部：26,214 个，球队映射、声望、上赛季排名。
-- 合同：44,341 份，含工资、起止日期、租借、条款。
-- 与 Python `fmsave` oracle 的共有字段全量逐字段对比：**0 差异**；名称、角色、伤病等派生字段由回归测试覆盖。
-- 解析耗时约 **0.57 秒**（release，M 系列 Mac）。
-- SQLite 缓存 + 服务端分页查询；CLI 与桌面 App 共用 `fm27-core`。
-- React UI：筛选、多列排序、球员详情、2–4 人对比、CSV/JSON 导出、隐藏属性开关、浅色/深色主题。
-- 多语言界面：英语 / 简体中文，默认跟随系统语言，不支持的语言回退英语；可在设置中切换，原生菜单同步切换。
-- 分析中心：年龄/CA 分布、俱乐部实力榜、阵容深度、小妖雷达（年龄 + PA + CA 差距）。
-- 快捷筛选：小妖、合同年、高潜、伤病 / 伤病史 / 停赛 / 租借 / 自由球员 / 可出战。
-- 角色评分：29 个 FM 风格角色按关键属性加权并叠加位置熟练度，详情页显示全部角色与最佳角色。
-- 成长曲线：每次解析按存档名 + 游戏日期写入快照，详情页显示 CA / PA / 身价历史。
-- 性别与名称：解析俱乐部性别（男子 / 女子），内置 208 个国家/地区中文名称表；赛事名称表支持用户 CSV。
-- 筛选联动：俱乐部、国籍、性别、状态计数随当前筛选实时更新。
-- 发布配置：hardened runtime、Developer ID 签名、notarization、Universal Binary 构建脚本与 CI。
+- Reads FM27 `27.0.0+2486695` saves directly; container, zstd and section directories are all parsed by Rust.
+- Supports Finder double-click / drag-and-drop for `.fm` files; a read-only snapshot is copied before parsing so a save in progress cannot be read half-written.
+- Players: 46,273 records with attributes, hidden attributes, CA/PA, positions, personality, traits, contracts, value and status.
+- Clubs: 26,214 records with team mapping, reputation and last season's league position.
+- Contracts: 44,341 records with wages, start/end dates, loans and clauses.
+- Full field-by-field comparison against the Python `fmsave` oracle for shared fields: **0 differences**; derived fields such as names, roles and injuries are covered by regression tests.
+- Parsing takes about **0.57 seconds** (release build, M-series Mac).
+- SQLite cache + server-side pagination; the CLI and desktop app share `fm27-core`.
+- React UI: filters, multi-column sorting, player details, 2–4 player comparison, CSV/JSON export, hidden-attribute toggle, light/dark themes.
+- Multilingual UI: English / Simplified Chinese, follows the system language by default and falls back to English for unsupported languages; can be switched in Settings, and the native menu follows the selection.
+- Analysis centre: age/CA distributions, club strength ranking, squad depth and wonderkid radar (age + PA + CA gap).
+- Quick filters: wonderkids, expiring contracts, high potential, injured / injury history / suspended / on loan / free agent / available.
+- Role scores: 29 FM-style roles weighted by key attributes and combined with position familiarity; the detail panel shows every role and the best role.
+- Growth history: each parse records a snapshot keyed by save name + game date; the detail panel shows CA / PA / value history.
+- Gender and names: parses club gender (men's / women's) and bundles names for 208 countries/regions; competition names are supplied through a user CSV.
+- Linked filtering: club, nationality, gender and status counts update live with the current filters.
+- Release setup: hardened runtime, Developer ID signing, notarization, Universal Binary build scripts and CI.
 
-真实存档未提交到仓库；开发时通过环境变量指定。
+Real saves are not committed to the repository; specify one with an environment variable during development.
 
-## 目录
+## Layout
 
 ```text
-apps/desktop/          Tauri 2 应用 + React UI
-crates/fm27-core/      Rust 解析、SQLite、查询、导出
+apps/desktop/          Tauri 2 app + React UI
+crates/fm27-core/      Rust parser, SQLite, queries, export
 crates/fm27-cli/       fm27scout CLI
 shared/schema.sql      SQLite schema
-scripts/               Python oracle 导出与 Rust/oracle 对比
-docs/                  布局、解析与验证说明
+scripts/               Python oracle export and Rust/oracle comparison
+docs/                  Layout, parser and validation notes
 ```
 
-## 构建产物
+## Build artifacts
 
-已完成本地验证的构建：
+Locally verified builds:
 
 ```text
 target/universal-apple-darwin/release/bundle/dmg/FM27 Scout_0.2.0_universal.dmg
 target/universal-apple-darwin/release/bundle/macos/FM27 Scout.app
 ```
 
-本地开发构建也可以只生成当前架构的 `target/release/bundle`。
+Local development builds can also produce a `target/release/bundle` for the current architecture only.
 
-Universal Binary / 签名 / 公证使用 `scripts/release-macos.sh`，详见
-[docs/release.md](docs/release.md)。CI 在 `v*` tag 上构建并上传 Universal DMG 与 SHA-256。
+Universal Binary / signing / notarization use `scripts/release-macos.sh`; see
+[docs/release.md](docs/release.md). CI builds and uploads a Universal DMG plus SHA-256 on `v*` tags.
 
-## 开发环境
+## Development environment
 
 - macOS 14+
-- Rust stable（`rustup`）
+- Rust stable (`rustup`)
 - Node 20+ / pnpm
-- Python 3.12 + `fmsave`（仅用于 oracle 对比）
+- Python 3.12 + `fmsave` (only for oracle comparison)
 
 ```bash
 # Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# 前端依赖
+# Frontend dependencies
 cd apps/desktop
 pnpm install
 
-# 开发模式
+# Development mode
 pnpm tauri dev
 ```
 
@@ -77,64 +79,65 @@ pnpm tauri dev
 ```bash
 cargo build --release -p fm27-cli
 
-# 容器信息（不解压 game_db）
+# Container information (does not decompress game_db)
 ./target/release/fm27scout inspect "/path/to/save.fm"
 
-# 完整解析报告
+# Full parse report
 ./target/release/fm27scout validate "/path/to/save.fm"
 
-# 前 1000 名球员
+# First 1,000 players
 ./target/release/fm27scout players "/path/to/save.fm" --limit 1000 --format json
 
-# 导出 CSV
+# Export CSV
 ./target/release/fm27scout players "/path/to/save.fm" --limit 50000 --format csv --output players.csv
 
-# 解析并写入 SQLite 缓存
+# Parse and write the SQLite cache
 ./target/release/fm27scout index "/path/to/save.fm" --db fm27scout.db
 ```
 
-## 验证
+## Validation
 
 ```bash
-# Rust 单元测试
+# Rust unit tests
 cargo test -p fm27-core
 
-# 真实存档回归测试（需要存档）
+# Real-save regression tests (requires a save)
 FM27_TEST_SAVE="$HOME/Library/Application Support/Sports Interactive/Football Manager 27/games/BB KING - Casciavit.fm" \
   cargo test -p fm27-core --release -- --ignored
 
-# Python oracle 导出 + 对比
+# Python oracle export + comparison
 python3 -m venv .venv
-.venv/bin/pip install -e .ref-fmsave    # 开发期本地克隆
+.venv/bin/pip install -e .ref-fmsave    # local clone for development
 .venv/bin/python scripts/oracle_export.py --output /tmp/oracle.json
 .venv/bin/python scripts/compare_outputs.py /tmp/oracle.json /tmp/rust.json
 ```
 
-参考结果见 [docs/validation.md](docs/validation.md)。名称表格式见
-[docs/name-tables.md](docs/name-tables.md)，发布流程见 [docs/release.md](docs/release.md)。
+Reference results are in [docs/validation.md](docs/validation.md). The name-table format is
+described in [docs/name-tables.md](docs/name-tables.md), and the release process in
+[docs/release.md](docs/release.md).
 
-## 安全边界
+## Security boundaries
 
-- 不修改 `.fm` 存档，不读取游戏内存，不注入进程。
-- 不启用 Tauri `shell` / 任意文件系统插件；只使用用户主动选择的文件。
-- 不发起网络请求；CSP 限制本地资源。
-- 隐藏属性默认关闭；开启时提示仅限单机使用。
-- 数据库、日志、快照只写入 `~/Library/Application Support/com.fm27scout.desktop/`；快照解析后删除。
+- Never modifies `.fm` saves, reads game memory, or injects into game processes.
+- Does not enable Tauri `shell` / arbitrary filesystem plugins; only files selected by the user are used.
+- Makes no network requests; CSP restricts local resources.
+- Hidden attributes are off by default; enabling them shows a single-player-only warning.
+- Databases, logs and snapshots are written only to `~/Library/Application Support/com.fm27scout.desktop/`; snapshots are deleted after parsing.
 
-## 已知限制
+## Known limitations
 
-- 当前只针对 build `27.0.0+2486695` 做了完整验证；其他 FM27 build 会降级并提示，不猜测字段。
-- 国家名称已内置；赛事名称不入库，需按 `database_id` 提供 `shared/competition-names.csv`。
-- 当前伤病数据来自 `injury_manager` 的伤病史；该存档没有 FM 的“预计复出”typed 行时，“伤病中”为空，但“伤病史”可用。
-- 合同条款、租借和合同链已解析；少数未观测的 fallback 结构会显式留空。
-- Windows/Linux 暂不构建。
-- Developer ID 签名 / notarization 已配置脚本与 CI；发布需要自备 Apple Developer 证书和公证凭据。
+- Only build `27.0.0+2486695` has been fully verified; other FM27 builds are read in degraded mode with a warning, and missing fields are never guessed.
+- Country names are bundled; competition names are not stored in the cache and must be supplied through `shared/competition-names.csv` keyed by `database_id`.
+- Injury data currently comes from the `injury_manager` history. If a save has no FM "expected return" typed rows, "injured" is empty while "injury history" still works.
+- Contract clauses, loans and contract chains are parsed; a few unobserved fallback structures are explicitly left blank.
+- Windows/Linux builds are not available yet.
+- Developer ID signing / notarization scripts and CI are configured; publishing requires your own Apple Developer certificate and notarization credentials.
 
-## 后续
+## Roadmap
 
-1. 赛事索引与赛事名称联动、Tauri Updater。
-2. 无障碍细节、Intel 实机回归、更多真实存档边界测试。
+1. Competition index and competition-name linkage, Tauri Updater.
+2. Accessibility polish, Intel hardware regression, and more real-save edge-case tests.
 
-## 许可证与归属
+## License and attribution
 
-本项目代码使用 MIT。解析逻辑参考并移植自 [fmsave](https://github.com/rhiever/fmsave)（MIT）。详见 [THIRD_PARTY.md](THIRD_PARTY.md)。
+The project code is MIT licensed. Parsing logic references and ports [fmsave](https://github.com/rhiever/fmsave) (MIT). See [THIRD_PARTY.md](THIRD_PARTY.md).
