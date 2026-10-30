@@ -19,7 +19,9 @@ environment only for development:
 ```
 
 The export contains 46,273 players with the fields compared by
-`scripts/compare_outputs.py`.
+`scripts/compare_outputs.py`. Fields the oracle does not export are skipped by the
+comparison: derived names, club gender, role scores, injuries and suspensions are covered
+by the real-save regression test instead.
 
 ## Rust output
 

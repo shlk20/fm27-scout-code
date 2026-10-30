@@ -7,6 +7,9 @@ import argparse
 import json
 from pathlib import Path
 
+# Fields the oracle does not export, either because fmsave omits them or because
+# FM27 Scout derives them (names, roles, injuries, suspensions). They are covered by
+# the real-save regression test instead of the oracle diff.
 SKIP = {
     "unique_id",
     "second_nation_ids",
@@ -14,6 +17,12 @@ SKIP = {
     "home_grown_club_uids",
     "loan_parent_club_name",
     "traits",
+    "best_role",
+    "club_nation_name",
+    "gender",
+    "injuries",
+    "nation_name",
+    "suspensions",
 }
 
 
