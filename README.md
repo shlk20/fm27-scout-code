@@ -38,7 +38,7 @@ docs/                  布局、解析与验证说明
 已完成本地验证的构建：
 
 ```text
-target/release/bundle/dmg/FM27 Scout_0.1.0_aarch64.dmg   # 3.8 MB
+target/release/bundle/dmg/FM27 Scout_0.1.0_aarch64.dmg   # 3.9 MB
 target/release/bundle/macos/FM27 Scout.app               # 由 --bundles app 生成
 ```
 
