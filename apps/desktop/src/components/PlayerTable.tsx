@@ -19,10 +19,18 @@ import {
   Users,
 } from "lucide-react";
 import { usePlayerPage } from "@/lib/query";
-import type { PlayerRow } from "@/lib/types";
+import { ATTRIBUTE_LABELS, type PlayerRow } from "@/lib/types";
 import { caTone, cn, formatValue, formatWage, initials } from "@/lib/utils";
 import { useAppStore } from "@/store/app";
 import { Badge, Button, EmptyState } from "./ui";
+
+const TECHNICAL_COLUMNS = ["passing", "dribbling", "finishing", "first_touch", "technique", "crossing"];
+const MENTAL_COLUMNS = ["vision", "decisions", "anticipation", "teamwork", "work_rate", "determination"];
+const PHYSICAL_COLUMNS = ["pace", "acceleration", "stamina", "strength", "jumping_reach", "agility"];
+const ATTRIBUTE_TABLE_KEYS = [...TECHNICAL_COLUMNS, ...MENTAL_COLUMNS, ...PHYSICAL_COLUMNS];
+const OVERVIEW_VISIBILITY: VisibilityState = Object.fromEntries(
+  ATTRIBUTE_TABLE_KEYS.map((key) => [`attr_${key}`, false]),
+);
 
 export function PlayerTable() {
   const page = usePlayerPage();
@@ -40,6 +48,7 @@ export function PlayerTable() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     height: false,
     foot: false,
+    ...OVERVIEW_VISIBILITY,
   });
   const [columnsOpen, setColumnsOpen] = useState(false);
 
@@ -218,6 +227,17 @@ export function PlayerTable() {
           </span>
         ),
       },
+      ...ATTRIBUTE_TABLE_KEYS.map<ColumnDef<PlayerRow>>((key) => ({
+        id: `attr_${key}`,
+        accessorFn: (row) => row.attributes[key],
+        header: ATTRIBUTE_LABELS[key] ?? key,
+        size: 62,
+        cell: ({ row }) => (
+          <span className="font-mono text-[10px] font-semibold text-[var(--ink)]">
+            {row.original.attributes[key] ?? "—"}
+          </span>
+        ),
+      })),
       {
         id: "hidden",
         header: "隐藏",
@@ -244,6 +264,9 @@ export function PlayerTable() {
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualSorting: true,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
+    defaultColumn: { minSize: 44, maxSize: 520 },
     state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
   });
@@ -294,6 +317,36 @@ export function PlayerTable() {
             </Button>
             {columnsOpen && (
               <div className="absolute right-0 top-7 z-30 w-44 rounded-[9px] border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-pop)]">
+                <div className="mb-1.5 grid grid-cols-2 gap-1 border-b border-[var(--line)] pb-1.5">
+                  {[
+                    ["概览", null],
+                    ["技术", TECHNICAL_COLUMNS],
+                    ["精神", MENTAL_COLUMNS],
+                    ["身体", PHYSICAL_COLUMNS],
+                  ].map(([label, keys]) => (
+                    <button
+                      key={label as string}
+                      type="button"
+                      onClick={() => {
+                        const visibility: VisibilityState = {};
+                        for (const column of table.getAllLeafColumns()) {
+                          visibility[column.id] = !column.id.startsWith("attr_");
+                        }
+                        visibility.height = false;
+                        visibility.foot = false;
+                        if (keys) {
+                          for (const key of keys as string[]) visibility[`attr_${key}`] = true;
+                        }
+                        setColumnVisibility(visibility);
+                        setColumnsOpen(false);
+                      }}
+                      className="rounded-[5px] border border-[var(--line)] px-1.5 py-1 text-[10px] text-[var(--muted)] hover:border-[var(--accent-line)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-strong)]"
+                    >
+                      {label as string}
+                    </button>
+                  ))}
+                </div>
+                <div className="thin-scroll max-h-72 overflow-auto">
                 {table
                   .getAllLeafColumns()
                   .filter((column) => column.id !== "compare" && column.id !== "name")
@@ -310,6 +363,7 @@ export function PlayerTable() {
                       </span>
                     </button>
                   ))}
+                </div>
               </div>
             )}
           </div>
@@ -330,7 +384,7 @@ export function PlayerTable() {
             description="尝试放宽筛选条件，或清空搜索。当前存档中的所有球员仍然保留在本地缓存中。"
           />
         ) : (
-          <table className="w-full border-separate border-spacing-0 text-left">
+          <table className="w-full border-separate border-spacing-0 text-left" style={{ tableLayout: "fixed" }}>
             <thead className="sticky top-0 z-20 bg-[var(--surface)]/95 backdrop-blur">
               <tr>
                 {table.getHeaderGroups()[0].headers.map((header) => {
@@ -345,6 +399,7 @@ export function PlayerTable() {
                         header.id === "name" && "sticky left-0 z-30 bg-[var(--surface)]",
                         header.id === "compare" && "sticky left-0 z-30 bg-[var(--surface)]",
                         sortKey && "cursor-pointer select-none hover:text-[var(--ink)]",
+                        "relative",
                       )}
                       onClick={() => sortKey && setSort(sortKey)}
                     >
@@ -361,6 +416,16 @@ export function PlayerTable() {
                             <ArrowUpDown size={10} className="opacity-30" />
                           ))}
                       </span>
+                      {header.column.getCanResize() && (
+                        <span
+                          role="separator"
+                          aria-orientation="vertical"
+                          onMouseDown={header.getResizeHandler()}
+                          onTouchStart={header.getResizeHandler()}
+                          onClick={(event) => event.stopPropagation()}
+                          className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none hover:bg-[var(--accent-line)]"
+                        />
+                      )}
                     </th>
                   );
                 })}
