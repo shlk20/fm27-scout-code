@@ -94,6 +94,11 @@ fn caches_queries_and_exports_the_reference_career() {
             .all(|row| row.age.unwrap_or(99) <= 23)
     );
 
+    let options = store.filter_options(save_id).expect("filter options");
+    assert!(!options.clubs.is_empty());
+    assert!(!options.nations.is_empty());
+    assert!(options.min_ca.unwrap_or(0) <= options.max_ca.unwrap_or(200));
+
     let player = store
         .get_player(save_id, 652912, true)
         .expect("get player")
