@@ -34,6 +34,7 @@ import {
   initials,
 } from "@/lib/utils";
 import { useAppStore } from "@/store/app";
+import { AttributeRadar } from "./AttributeRadar";
 import { Badge, Button, EmptyState, Switch } from "./ui";
 
 type Tab = "attributes" | "hidden" | "positions" | "contract" | "traits";
@@ -266,11 +267,21 @@ function AttributesPanel({
   attributes: Attributes;
   max: number;
 }) {
-  const groups = player.natural_positions.includes("GK") || player.positions.gk >= 15
+  const isGoalkeeper = player.natural_positions.includes("GK") || player.positions.gk >= 15;
+  const groups = isGoalkeeper
     ? [...ATTRIBUTE_GROUPS.technical.slice(0, 2), ...ATTRIBUTE_GROUPS.goalkeeping, ...ATTRIBUTE_GROUPS.technical.slice(2)]
     : ATTRIBUTE_GROUPS.technical;
+  const radarKeys = isGoalkeeper
+    ? ["handling", "reflexes", "aerial_reach", "command_of_area", "kicking", "one_on_ones"]
+    : ["passing", "dribbling", "finishing", "tackling", "vision", "pace"];
   return (
     <div className="space-y-4 px-4 py-3">
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)]">
+        <div className="border-b border-[var(--line)] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+          能力雷达
+        </div>
+        <AttributeRadar values={attributes} keys={radarKeys} max={max} />
+      </div>
       {groups.map((group) => (
         <div key={group.label}>
           <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
