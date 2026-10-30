@@ -31,6 +31,18 @@ scripts/               Python oracle 导出与 Rust/oracle 对比
 docs/                  布局、解析与验证说明
 ```
 
+## 构建产物
+
+已完成本地验证的构建：
+
+```text
+target/release/bundle/dmg/FM27 Scout_0.1.0_aarch64.dmg   # 3.8 MB
+target/release/bundle/macos/FM27 Scout.app               # 由 --bundles app 生成
+```
+
+当前产物为 Apple Silicon（aarch64）。Universal Binary 使用
+`scripts/build-universal.sh` 或 `pnpm tauri build --target universal-apple-darwin`。
+
 ## 开发环境
 
 - macOS 14+
