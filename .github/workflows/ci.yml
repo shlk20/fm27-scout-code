@@ -22,9 +22,6 @@ jobs:
       - name: Rust tests
         run: cargo test -p fm27-core
 
-      - name: Check desktop backend
-        run: cargo check -p fm27-scout-desktop
-
       - name: Install Node
         uses: actions/setup-node@v4
         with:
@@ -44,3 +41,6 @@ jobs:
       - name: Frontend tests
         working-directory: apps/desktop
         run: pnpm test
+
+      - name: Check desktop backend
+        run: cargo check -p fm27-scout-desktop
