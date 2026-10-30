@@ -2,7 +2,7 @@
 mod tests {
     use chrono::{Datelike, NaiveDate};
 
-    use crate::layout::{decode_date, scale_attribute};
+    use crate::layout::{decode_date, scale_attribute, trait_name};
 
     #[test]
     fn date_round_trips_day_of_year() {
@@ -33,5 +33,18 @@ mod tests {
         assert_eq!(scale_attribute(50), 10);
         assert_eq!(scale_attribute(75), 15);
         assert_eq!(scale_attribute(100), 20);
+    }
+
+    #[test]
+    fn player_traits_cover_every_used_bit() {
+        for bit in 0..64u8 {
+            if bit == 53 {
+                assert_eq!(trait_name(bit), None);
+                continue;
+            }
+            assert!(trait_name(bit).is_some(), "trait bit {bit} has no name");
+        }
+        assert_eq!(trait_name(10), Some("Places Shots"));
+        assert_eq!(trait_name(51), Some("Runs With Ball Often"));
     }
 }

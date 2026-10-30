@@ -6,7 +6,9 @@ use chrono::NaiveDate;
 pub const GAME: &str = "FM27";
 pub const BUILD: &str = "27.0.0+2486695";
 pub const GAME_DB_SCHEMA: u32 = 4000;
-pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Cache/parser revision. The suffix invalidates caches written before the
+/// complete player-trait name table landed.
+pub const PARSER_VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "+trait-names");
 pub const EARLIEST_YEAR: i32 = 1901;
 pub const LATEST_YEAR: i32 = 2200;
 pub const MISSING_U32: u32 = 0xFFFF_FFFF;
@@ -74,57 +76,83 @@ pub const ATTRIBUTE_KEYS: [&str; 52] = [
     "concentration",
 ];
 
-/// Bit index -> a trait name that has been confirmed in game. Unknown bits keep their index.
-pub const TRAIT_NAMES: [(&str, &str); 16] = [
-    ("runs_with_ball_down_left", "Runs With Ball Down Left"),
-    ("runs_with_ball_down_right", "Runs With Ball Down Right"),
-    (
-        "runs_with_ball_through_centre",
-        "Runs With Ball Through Centre",
-    ),
-    ("moves_into_channels", "Moves Into Channels"),
-    (
-        "gets_forward_whenever_possible",
-        "Gets Forward Whenever Possible",
-    ),
-    ("tries_killer_balls_often", "Tries Killer Balls Often"),
-    ("shoots_from_distance", "Shoots From Distance"),
-    (
-        "likes_to_try_to_beat_offside_trap",
-        "Likes To Try To Beat Offside Trap",
-    ),
-    ("comes_deep_to_get_ball", "Comes Deep To Get Ball"),
-    ("dictates_tempo", "Dictates Tempo"),
-    ("knocks_ball_past_opponent", "Knocks Ball Past Opponent"),
-    ("avoids_using_weaker_foot", "Avoids Using Weaker Foot"),
-    ("dives_into_tackles", "Dives Into Tackles"),
-    ("tries_long_range_passes", "Tries Long Range Passes"),
-    ("runs_with_ball_often", "Runs With Ball Often"),
-    ("crosses_early", "Crosses Early"),
+/// Bit index -> the player trait the game stores in that bit.
+///
+/// The first 48 entries follow the game's own trait order. The remaining entries
+/// were matched against the save's player data (positions and attributes) and
+/// the FM27 localisation table. Bit 53 currently has no trait name.
+pub const TRAIT_NAMES: [&str; 64] = [
+    "Runs With Ball Down Left",
+    "Runs With Ball Down Right",
+    "Runs With Ball Through Centre",
+    "Gets Into Opposition Area",
+    "Moves Into Channels",
+    "Gets Forward Whenever Possible",
+    "Plays Short Simple Passes",
+    "Tries Killer Balls Often",
+    "Shoots From Distance",
+    "Shoots With Power",
+    "Places Shots",
+    "Curls Ball",
+    "Likes To Round Keeper",
+    "Likes To Try To Beat Offside Trap",
+    "Uses Outside Of Foot",
+    "Marks Opponent Tightly",
+    "Winds Up Opponents",
+    "Argues With Officials",
+    "Plays With Back To Goal",
+    "Comes Deep To Get Ball",
+    "Plays One-Twos",
+    "Likes To Lob Keeper",
+    "Dictates Tempo",
+    "Attempts Overhead Kicks",
+    "Looks For Pass Rather Than Attempting To Score",
+    "Plays No Through Balls",
+    "Stops Play",
+    "Knocks Ball Past Opponent",
+    "Moves Ball To Right Foot Before Dribble Attempt",
+    "Moves Ball To Left Foot Before Dribble Attempt",
+    "Dwells On Ball",
+    "Arrives Late In Opponents' Area",
+    "Tries To Play Way Out Of Trouble",
+    "Stays Back At All Times",
+    "Avoids Using Weaker Foot",
+    "Tries Tricks",
+    "Tries Long Range Free Kicks",
+    "Dives Into Tackles",
+    "Does Not Dive Into Tackles",
+    "Cuts Inside From Both Wings",
+    "Hugs Line",
+    "Gets Crowd Going",
+    "Tries First Time Shots",
+    "Tries Long Range Passes",
+    "Likes Ball Played Into Feet",
+    "Hits Free Kicks With Power",
+    "Likes To Beat Opponent Repeatedly",
+    "Likes To Switch Ball To Wide Areas",
+    "Uses Long Throw To Start Counter Attacks",
+    "Play Football For as Long as Possible",
+    "Possesses Long Flat Throw",
+    "Runs With Ball Often",
+    "Runs With Ball Rarely",
+    "",
+    "Does not Move Into Channels",
+    "Plays Ball With Feet",
+    "Refrains From Taking Long Shots",
+    "Cuts Inside From Left Wing",
+    "Cuts Inside From Right Wing",
+    "Crosses Early",
+    "Brings Ball Out of Defence",
+    "Demands to Take Free Kicks",
+    "Demands to Take Penalties",
+    "Will Retire at Top",
 ];
 
 pub fn trait_name(bit: u8) -> Option<&'static str> {
-    let known: [(u8, &str); 16] = [
-        (0, "Runs With Ball Down Left"),
-        (1, "Runs With Ball Down Right"),
-        (2, "Runs With Ball Through Centre"),
-        (4, "Moves Into Channels"),
-        (5, "Gets Forward Whenever Possible"),
-        (7, "Tries Killer Balls Often"),
-        (8, "Shoots From Distance"),
-        (13, "Likes To Try To Beat Offside Trap"),
-        (19, "Comes Deep To Get Ball"),
-        (22, "Dictates Tempo"),
-        (27, "Knocks Ball Past Opponent"),
-        (34, "Avoids Using Weaker Foot"),
-        (37, "Dives Into Tackles"),
-        (43, "Tries Long Range Passes"),
-        (51, "Runs With Ball Often"),
-        (59, "Crosses Early"),
-    ];
-    known
-        .iter()
-        .find_map(|(index, name)| (*index == bit).then_some(*name))
+    TRAIT_NAMES
+        .get(usize::from(bit))
+        .copied()
+        .filter(|name| !name.is_empty())
 }
 
 #[derive(Debug, Clone, Copy)]

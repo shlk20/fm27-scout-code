@@ -47,6 +47,9 @@ describe("localized domain labels", () => {
     expect(attributeLabel("passing", "en")).toBe("Passing");
     expect(attributeLabel("passing", "zh-CN")).toBe("传球");
     expect(traitLabel(8, "Shoots From Distance", "zh-CN")).toBe("远射");
+    expect(traitLabel(10, "Places Shots", "zh-CN")).toBe("巧射");
+    expect(traitLabel(53, null, "zh-CN")).toBe("未知习惯");
+    expect(traitLabel(53, null, "en")).toBe("Unknown trait");
     expect(roleName("poacher", "抢点前锋（进攻）", "en")).toBe("Poacher (Attack)");
     expect(personalityLabel("professionalism", "en")).toBe("Professionalism");
   });
