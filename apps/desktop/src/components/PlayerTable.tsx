@@ -27,7 +27,8 @@ import { Badge, Button, EmptyState } from "./ui";
 const TECHNICAL_COLUMNS = ["passing", "dribbling", "finishing", "first_touch", "technique", "crossing"];
 const MENTAL_COLUMNS = ["vision", "decisions", "anticipation", "teamwork", "work_rate", "determination"];
 const PHYSICAL_COLUMNS = ["pace", "acceleration", "stamina", "strength", "jumping_reach", "agility"];
-const ATTRIBUTE_TABLE_KEYS = [...TECHNICAL_COLUMNS, ...MENTAL_COLUMNS, ...PHYSICAL_COLUMNS];
+const GOALKEEPING_COLUMNS = ["handling", "aerial_reach", "command_of_area", "communication", "kicking", "reflexes"];
+const ATTRIBUTE_TABLE_KEYS = [...TECHNICAL_COLUMNS, ...MENTAL_COLUMNS, ...PHYSICAL_COLUMNS, ...GOALKEEPING_COLUMNS];
 const OVERVIEW_VISIBILITY: VisibilityState = Object.fromEntries(
   ATTRIBUTE_TABLE_KEYS.map((key) => [`attr_${key}`, false]),
 );
@@ -323,6 +324,7 @@ export function PlayerTable() {
                     ["技术", TECHNICAL_COLUMNS],
                     ["精神", MENTAL_COLUMNS],
                     ["身体", PHYSICAL_COLUMNS],
+                    ["门将", GOALKEEPING_COLUMNS],
                   ].map(([label, keys]) => (
                     <button
                       key={label as string}
