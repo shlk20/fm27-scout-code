@@ -1,0 +1,258 @@
+import { useEffect, useRef, useState } from "react";
+import {
+  ChevronDown,
+  Database,
+  Download,
+  Eye,
+  FilePlus2,
+  FolderOpen,
+  GitCompareArrows,
+  HelpCircle,
+  LockKeyhole,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+  Settings2,
+  X,
+} from "lucide-react";
+import { useSaves } from "@/lib/query";
+import { relativeTime, cn } from "@/lib/utils";
+import { useAppStore } from "@/store/app";
+import { useOpenSave } from "@/lib/openSave";
+import { Badge, Button, Input } from "./ui";
+
+export function Toolbar() {
+  const summary = useAppStore((state) => state.summary);
+  const sidebarOpen = useAppStore((state) => state.sidebarOpen);
+  const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
+  const filters = useAppStore((state) => state.filters);
+  const patchFilters = useAppStore((state) => state.patchFilters);
+  const hiddenEnabled = useAppStore((state) => state.hiddenEnabled);
+  const setHiddenEnabled = useAppStore((state) => state.setHiddenEnabled);
+  const compareUids = useAppStore((state) => state.compareUids);
+  const setCompareOpen = useAppStore((state) => state.setCompareOpen);
+  const setExportOpen = useAppStore((state) => state.setExportOpen);
+  const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
+  const setHelpOpen = useAppStore((state) => state.setHelpOpen);
+  const pushToast = useAppStore((state) => state.pushToast);
+  const { chooseAndOpen, openPath } = useOpenSave();
+  const { data: saves = [] } = useSaves();
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false);
+  const [search, setSearch] = useState(filters.search);
+  const saveMenuRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setSearch(filters.search);
+  }, [filters.search]);
+
+  useEffect(() => {
+    if (!saveMenuOpen) return;
+    const handler = (event: MouseEvent) => {
+      if (!saveMenuRef.current?.contains(event.target as Node)) setSaveMenuOpen(false);
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [saveMenuOpen]);
+
+  const updateSearch = (value: string) => {
+    setSearch(value);
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      patchFilters({ search: value });
+    }, 180);
+  };
+
+  return (
+    <header className="titlebar-drag flex h-11 shrink-0 items-center gap-2 border-b border-[var(--line)] bg-[var(--surface)]/95 px-3 pl-[86px] backdrop-blur">
+      <div className="no-drag flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label={sidebarOpen ? "收起筛选" : "展开筛选"}
+          title={sidebarOpen ? "收起筛选" : "展开筛选"}
+        >
+          {sidebarOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+        </Button>
+
+        <div ref={saveMenuRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setSaveMenuOpen((value) => !value)}
+            className="focus-ring flex h-8 items-center gap-2 rounded-[7px] border border-[var(--line)] bg-[var(--surface-2)] px-2.5 text-left transition-colors hover:border-[var(--line-strong)]"
+          >
+            <Database size={13} className="text-[var(--accent)]" />
+            <span className="max-w-[220px] truncate text-[11px] font-semibold text-[var(--ink)]">
+              {summary?.save_name ?? "未打开存档"}
+            </span>
+            {summary?.game_date && (
+              <span className="font-mono text-[10px] text-[var(--muted)]">{summary.game_date}</span>
+            )}
+            <ChevronDown size={12} className="text-[var(--muted)]" />
+          </button>
+          {saveMenuOpen && (
+            <div className="absolute left-0 top-[calc(100%+5px)] z-40 w-[360px] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-pop)]">
+              <div className="border-b border-[var(--line)] px-3 py-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  最近存档
+                </div>
+              </div>
+              <div className="max-h-[320px] overflow-auto p-1.5">
+                {saves.length === 0 && (
+                  <div className="px-2 py-4 text-center text-[11px] text-[var(--muted)]">
+                    还没有缓存过存档
+                  </div>
+                )}
+                {saves.map((save) => (
+                  <button
+                    key={save.id}
+                    type="button"
+                    onClick={() => {
+                      setSaveMenuOpen(false);
+                      void openPath(save.path);
+                    }}
+                    className="flex w-full items-start gap-2 rounded-[8px] px-2 py-2 text-left hover:bg-[var(--surface-2)]"
+                  >
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--accent)]">
+                      <Database size={13} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[11px] font-semibold text-[var(--ink)]">
+                        {save.file_name}
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-2 text-[9px] text-[var(--muted)]">
+                        <span>{save.game_date ?? "未知日期"}</span>
+                        <span>·</span>
+                        <span>{save.players.toLocaleString("en-US")} 人</span>
+                        <span>·</span>
+                        <span>{relativeTime(save.parsed_at)}</span>
+                      </div>
+                    </div>
+                    {summary?.path === save.path && <Badge tone="accent">当前</Badge>}
+                  </button>
+                ))}
+              </div>
+              <div className="border-t border-[var(--line)] p-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSaveMenuOpen(false);
+                    void chooseAndOpen();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-[7px] px-2 py-2 text-[11px] font-medium text-[var(--accent-strong)] hover:bg-[var(--accent-soft)]"
+                >
+                  <FolderOpen size={13} />
+                  打开其他存档…
+                  <span className="ml-auto kbd">⌘O</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Button variant="secondary" size="sm" onClick={() => void chooseAndOpen()} className="h-8">
+          <FilePlus2 size={13} />
+          打开
+        </Button>
+      </div>
+
+      <div className="no-drag mx-auto flex w-full max-w-[560px] items-center">
+        <div className="relative w-full">
+          <Search
+            size={14}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+          />
+          <Input
+            id="global-search"
+            value={search}
+            onChange={(event) => updateSearch(event.target.value)}
+            placeholder="搜索球员、俱乐部…"
+            className="h-8 pl-8 pr-16"
+          />
+          <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+            {search ? (
+              <button
+                type="button"
+                className="pointer-events-auto rounded p-0.5 text-[var(--muted)] hover:text-[var(--ink)]"
+                onClick={() => updateSearch("")}
+                aria-label="清除搜索"
+              >
+                <X size={12} />
+              </button>
+            ) : (
+              <span className="kbd">⌘F</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="no-drag flex items-center gap-1">
+        <Button
+          variant={hiddenEnabled ? "gold" : "ghost"}
+          size="sm"
+          className="h-8"
+          onClick={() => {
+            if (hiddenEnabled) {
+              setHiddenEnabled(false);
+              return;
+            }
+            pushToast({
+              title: "开启隐藏属性？",
+              description: "隐藏属性仅限单机使用，线上联赛可能被视为作弊。",
+              tone: "default",
+            });
+            setHiddenEnabled(true);
+          }}
+          title="隐藏属性"
+        >
+          {hiddenEnabled ? <Eye size={13} /> : <LockKeyhole size={13} />}
+          <span className="hidden xl:inline">隐藏</span>
+        </Button>
+        <Button
+          variant={compareUids.length > 0 ? "gold" : "ghost"}
+          size="sm"
+          className="h-8"
+          disabled={compareUids.length < 2}
+          onClick={() => setCompareOpen(true)}
+          title="对比球员"
+        >
+          <GitCompareArrows size={13} />
+          <span className="hidden xl:inline">对比</span>
+          {compareUids.length > 0 && (
+            <span className="rounded-full bg-black/10 px-1 font-mono text-[9px]">{compareUids.length}</span>
+          )}
+        </Button>
+        <div className="mx-0.5 h-4 w-px bg-[var(--line)]" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => setExportOpen(true)}
+          title="导出"
+        >
+          <Download size={14} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => setSettingsOpen(true)}
+          title="设置"
+        >
+          <Settings2 size={14} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => setHelpOpen(true)}
+          title="关于与帮助"
+        >
+          <HelpCircle size={14} />
+        </Button>
+      </div>
+    </header>
+  );
+}

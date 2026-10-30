@@ -1,0 +1,18 @@
+[package]
+name = "fm27-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "CLI for the FM27 Scout parsing core"
+
+[[bin]]
+name = "fm27scout"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+csv.workspace = true
+fm27-core = { path = "../fm27-core" }
+serde_json.workspace = true

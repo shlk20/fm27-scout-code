@@ -1,0 +1,255 @@
+import { create } from "zustand";
+import type { FilterOptions, ParseProgress, SaveSummary } from "@/lib/types";
+
+export interface AttributeRule {
+  id: string;
+  key: string;
+  min: number | null;
+  max: number | null;
+}
+
+export interface Filters {
+  search: string;
+  clubUids: number[];
+  nationIds: number[];
+  ageMin: number | null;
+  ageMax: number | null;
+  caMin: number | null;
+  caMax: number | null;
+  paMin: number | null;
+  paMax: number | null;
+  paUnknown: boolean | null;
+  positions: string[];
+  positionMin: number;
+  attributes: AttributeRule[];
+  valueMin: number | null;
+  valueMax: number | null;
+  wageMin: number | null;
+  wageMax: number | null;
+  contractEndBefore: string | null;
+  contractEndAfter: string | null;
+  onLoan: boolean | null;
+}
+
+export const EMPTY_FILTERS: Filters = {
+  search: "",
+  clubUids: [],
+  nationIds: [],
+  ageMin: null,
+  ageMax: null,
+  caMin: null,
+  caMax: null,
+  paMin: null,
+  paMax: null,
+  paUnknown: null,
+  positions: [],
+  positionMin: 15,
+  attributes: [],
+  valueMin: null,
+  valueMax: null,
+  wageMin: null,
+  wageMax: null,
+  contractEndBefore: null,
+  contractEndAfter: null,
+  onLoan: null,
+};
+
+export type Theme = "system" | "light" | "dark";
+export type DisplayMode = "display" | "raw";
+
+export interface Toast {
+  id: number;
+  title: string;
+  description?: string;
+  tone: "default" | "success" | "error";
+}
+
+interface AppState {
+  saveId: number | null;
+  summary: SaveSummary | null;
+  filterOptions: FilterOptions | null;
+  filters: Filters;
+  sortBy: string;
+  sortDir: "asc" | "desc";
+  page: number;
+  pageSize: number;
+  selectedUid: number | null;
+  compareUids: number[];
+  hiddenEnabled: boolean;
+  displayMode: DisplayMode;
+  theme: Theme;
+  sidebarOpen: boolean;
+  inspectorOpen: boolean;
+  settingsOpen: boolean;
+  compareOpen: boolean;
+  exportOpen: boolean;
+  helpOpen: boolean;
+  toasts: Toast[];
+  parsing: boolean;
+  parseProgress: ParseProgress | null;
+  setSession: (saveId: number, summary: SaveSummary | null) => void;
+  clearSession: () => void;
+  setFilterOptions: (options: FilterOptions | null) => void;
+  patchFilters: (patch: Partial<Filters>) => void;
+  resetFilters: () => void;
+  togglePosition: (position: string) => void;
+  addAttribute: (key: string) => void;
+  updateAttribute: (id: string, patch: Partial<AttributeRule>) => void;
+  removeAttribute: (id: string) => void;
+  setSort: (by: string) => void;
+  setPage: (page: number) => void;
+  setSelectedUid: (uid: number | null) => void;
+  toggleCompare: (uid: number) => void;
+  clearCompare: () => void;
+  setHiddenEnabled: (enabled: boolean) => void;
+  setDisplayMode: (mode: DisplayMode) => void;
+  setTheme: (theme: Theme) => void;
+  setSidebarOpen: (open: boolean) => void;
+  setInspectorOpen: (open: boolean) => void;
+  setSettingsOpen: (open: boolean) => void;
+  setCompareOpen: (open: boolean) => void;
+  setExportOpen: (open: boolean) => void;
+  setHelpOpen: (open: boolean) => void;
+  setParsing: (parsing: boolean) => void;
+  setParseProgress: (progress: ParseProgress | null) => void;
+  pushToast: (toast: Omit<Toast, "id">) => void;
+  dismissToast: (id: number) => void;
+}
+
+let toastId = 0;
+
+export const useAppStore = create<AppState>((set, get) => ({
+  saveId: null,
+  summary: null,
+  filterOptions: null,
+  filters: EMPTY_FILTERS,
+  sortBy: "ca",
+  sortDir: "desc",
+  page: 0,
+  pageSize: 150,
+  selectedUid: null,
+  compareUids: [],
+  hiddenEnabled: false,
+  displayMode: "display",
+  theme: "system",
+  sidebarOpen: true,
+  inspectorOpen: true,
+  settingsOpen: false,
+  compareOpen: false,
+  exportOpen: false,
+  helpOpen: false,
+  toasts: [],
+  parsing: false,
+  parseProgress: null,
+  setSession: (saveId, summary) =>
+    set({
+      saveId,
+      summary,
+      filters: EMPTY_FILTERS,
+      page: 0,
+      selectedUid: null,
+      compareUids: [],
+    }),
+  clearSession: () =>
+    set({
+      saveId: null,
+      summary: null,
+      filterOptions: null,
+      selectedUid: null,
+      compareUids: [],
+      settingsOpen: false,
+      compareOpen: false,
+      exportOpen: false,
+    }),
+  setFilterOptions: (filterOptions) => set({ filterOptions }),
+  patchFilters: (patch) =>
+    set((state) => ({ filters: { ...state.filters, ...patch }, page: 0 })),
+  resetFilters: () => set({ filters: EMPTY_FILTERS, page: 0 }),
+  togglePosition: (position) =>
+    set((state) => {
+      const positions = state.filters.positions.includes(position)
+        ? state.filters.positions.filter((item) => item !== position)
+        : [...state.filters.positions, position];
+      return { filters: { ...state.filters, positions }, page: 0 };
+    }),
+  addAttribute: (key) =>
+    set((state) => {
+      if (state.filters.attributes.some((rule) => rule.key === key)) return state;
+      return {
+        filters: {
+          ...state.filters,
+          attributes: [
+            ...state.filters.attributes,
+            { id: `${key}-${Date.now()}`, key, min: null, max: null },
+          ],
+        },
+        page: 0,
+      };
+    }),
+  updateAttribute: (id, patch) =>
+    set((state) => ({
+      filters: {
+        ...state.filters,
+        attributes: state.filters.attributes.map((rule) =>
+          rule.id === id ? { ...rule, ...patch } : rule,
+        ),
+      },
+      page: 0,
+    })),
+  removeAttribute: (id) =>
+    set((state) => ({
+      filters: {
+        ...state.filters,
+        attributes: state.filters.attributes.filter((rule) => rule.id !== id),
+      },
+      page: 0,
+    })),
+  setSort: (by) =>
+    set((state) => ({
+      sortBy: by,
+      sortDir: state.sortBy === by && state.sortDir === "desc" ? "asc" : "desc",
+      page: 0,
+    })),
+  setPage: (page) => set({ page }),
+  setSelectedUid: (selectedUid) =>
+    set({ selectedUid, inspectorOpen: selectedUid != null }),
+  toggleCompare: (uid) =>
+    set((state) => {
+      if (state.compareUids.includes(uid)) {
+        return { compareUids: state.compareUids.filter((item) => item !== uid) };
+      }
+      if (state.compareUids.length >= 4) {
+        get().pushToast({
+          title: "最多对比 4 名球员",
+          description: "先移除一名已选球员，再加入新的球员。",
+          tone: "default",
+        });
+        return state;
+      }
+      return { compareUids: [...state.compareUids, uid] };
+    }),
+  clearCompare: () => set({ compareUids: [] }),
+  setHiddenEnabled: (hiddenEnabled) => set({ hiddenEnabled }),
+  setDisplayMode: (displayMode) => set({ displayMode }),
+  setTheme: (theme) => set({ theme }),
+  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+  setInspectorOpen: (inspectorOpen) => set({ inspectorOpen }),
+  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  setCompareOpen: (compareOpen) => set({ compareOpen }),
+  setExportOpen: (exportOpen) => set({ exportOpen }),
+  setHelpOpen: (helpOpen) => set({ helpOpen }),
+  setParsing: (parsing) => set({ parsing, parseProgress: parsing ? get().parseProgress : null }),
+  setParseProgress: (parseProgress) => set({ parseProgress }),
+  pushToast: (toast) =>
+    set((state) => {
+      const id = ++toastId;
+      window.setTimeout(() => {
+        useAppStore.setState((current) => ({
+          toasts: current.toasts.filter((item) => item.id !== id),
+        }));
+      }, 4200);
+      return { toasts: [...state.toasts, { ...toast, id }] };
+    }),
+  dismissToast: (id) =>
+    set((state) => ({ toasts: state.toasts.filter((item) => item.id !== id) })),
+}));

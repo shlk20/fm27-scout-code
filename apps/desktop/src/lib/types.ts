@@ -1,0 +1,457 @@
+export type TransferValueState = "ok" | "unset" | "placeholder" | "zero";
+
+export interface Attributes {
+  [key: string]: number;
+}
+
+export interface Positions {
+  gk: number;
+  sw: number;
+  dl: number;
+  dc: number;
+  dr: number;
+  dm: number;
+  ml: number;
+  mc: number;
+  mr: number;
+  aml: number;
+  amc: number;
+  amr: number;
+  stc: number;
+  wbl: number;
+  wbr: number;
+}
+
+export interface Personality {
+  adaptability: number;
+  ambition: number;
+  loyalty: number;
+  pressure: number;
+  professionalism: number;
+  sportsmanship: number;
+  temperament: number;
+  controversy: number;
+}
+
+export interface Trait {
+  bit: number;
+  name: string | null;
+}
+
+export interface Clause {
+  kind: number;
+  parameter: number | null;
+  value: number | null;
+}
+
+export interface ContractChainEntry {
+  club_uid: number | null;
+  club_name: string | null;
+  team_id: number;
+  wage: number;
+  start: string | null;
+  end: string | null;
+  has_terms: boolean;
+}
+
+export interface Contract {
+  club_uid: number | null;
+  club_name: string | null;
+  team_id: number | null;
+  wage: number | null;
+  start: string | null;
+  end: string | null;
+  squad_status: number | null;
+  contract_type: number | null;
+  clauses: Clause[];
+  on_loan: boolean | null;
+  loan_parent_club_uid: number | null;
+  loan_parent_club_name: string | null;
+  loan_start: string | null;
+  loan_end: string | null;
+  chain: ContractChainEntry[];
+}
+
+export interface Reputation {
+  bucket: number;
+  home: number;
+  current: number;
+  world: number;
+}
+
+export interface Player {
+  uid: number;
+  unique_id: number | null;
+  name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  common_name: string | null;
+  full_name: string | null;
+  legal_name: string | null;
+  birth_date: string | null;
+  age: number | null;
+  nation_id: number | null;
+  second_nation_ids: number[];
+  home_grown_nation_ids: number[];
+  home_grown_club_uids: (number | null)[];
+  home_grown_club_names: (string | null)[];
+  height_cm: number;
+  ca: number;
+  pa: number | null;
+  pa_range_code: number | null;
+  reputation: Reputation;
+  club_uid: number | null;
+  club_name: string | null;
+  club_short_name: string | null;
+  club_nation_id: number | null;
+  club_fa_nation_id: number | null;
+  club_reputation: number | null;
+  club_last_league_position: number | null;
+  team_id: number | null;
+  team_slot: number | null;
+  club_join_date: string | null;
+  natural_positions: string[];
+  accomplished_positions: string[];
+  personality: Personality | null;
+  attributes: Attributes;
+  raw_attributes: Attributes;
+  left_foot: number;
+  right_foot: number;
+  raw_left_foot: number;
+  raw_right_foot: number;
+  positions: Positions;
+  transfer_value: number | null;
+  transfer_value_state: TransferValueState;
+  raw_condition: number;
+  raw_match_sharpness: number;
+  traits: Trait[];
+  trait_bits: number | null;
+  on_loan: boolean | null;
+  loan_parent_club_uid: number | null;
+  loan_parent_club_name: string | null;
+  loan_start: string | null;
+  loan_end: string | null;
+  contract: Contract | null;
+}
+
+export interface PlayerRow {
+  uid: number;
+  name: string | null;
+  age: number | null;
+  club_uid: number | null;
+  club_name: string | null;
+  nation_id: number | null;
+  ca: number;
+  pa: number | null;
+  pa_range_code: number | null;
+  positions_text: string | null;
+  positions: Positions;
+  attributes: Attributes;
+  personality: Personality | null;
+  transfer_value: number | null;
+  transfer_value_state: TransferValueState;
+  wage: number | null;
+  contract_end: string | null;
+  height_cm: number | null;
+  left_foot: number | null;
+  right_foot: number | null;
+  on_loan: boolean | null;
+  traits: Trait[];
+}
+
+export interface PlayerQuery {
+  save_id: number;
+  search?: string | null;
+  uids?: number[];
+  club_uids?: number[];
+  nation_ids?: number[];
+  age_min?: number | null;
+  age_max?: number | null;
+  ca_min?: number | null;
+  ca_max?: number | null;
+  pa_min?: number | null;
+  pa_max?: number | null;
+  pa_unknown?: boolean | null;
+  positions?: string[];
+  position_min?: number | null;
+  attributes?: { key: string; min?: number | null; max?: number | null }[];
+  value_min?: number | null;
+  value_max?: number | null;
+  wage_min?: number | null;
+  wage_max?: number | null;
+  contract_end_before?: string | null;
+  contract_end_after?: string | null;
+  on_loan?: boolean | null;
+  include_hidden?: boolean;
+  sort_by?: string | null;
+  sort_dir?: "asc" | "desc" | null;
+  page?: number | null;
+  page_size?: number | null;
+}
+
+export interface PlayerPage {
+  total: number;
+  page: number;
+  page_size: number;
+  rows: PlayerRow[];
+}
+
+export interface SaveRecord {
+  id: number;
+  path: string;
+  file_name: string;
+  game: string;
+  build: string;
+  game_date: string | null;
+  parser_version: string;
+  parsed_at: string;
+  players: number;
+  clubs: number;
+  contracts: number;
+}
+
+export interface SaveSummary {
+  path: string;
+  file_name: string;
+  file_size: number;
+  mtime_ns: number;
+  fingerprint: string;
+  save_name: string;
+  game: string;
+  build: string;
+  game_date: string | null;
+  db_version: string;
+  section_count: number;
+  decompressed_bytes: number;
+}
+
+export interface ParseReport {
+  save: SaveSummary;
+  players: number;
+  clubs: number;
+  contracts: number;
+  markerless_players: number;
+  players_with_person: number;
+  players_with_club: number;
+  players_with_contract: number;
+  elapsed_ms: number;
+  warnings: string[];
+}
+
+export interface FilterOption {
+  id: number;
+  name: string;
+  count: number;
+}
+
+export interface FilterOptions {
+  clubs: FilterOption[];
+  nations: FilterOption[];
+  min_age: number | null;
+  max_age: number | null;
+  min_ca: number | null;
+  max_ca: number | null;
+  min_pa: number | null;
+  max_pa: number | null;
+  min_value: number | null;
+  max_value: number | null;
+  min_wage: number | null;
+  max_wage: number | null;
+}
+
+export interface OpenSaveResult {
+  save_id: number;
+  cached: boolean;
+  summary: SaveSummary;
+  report: ParseReport | null;
+}
+
+export interface ParseProgress {
+  stage: string;
+  current: number;
+  total: number;
+  message: string;
+}
+
+export interface ExportReport {
+  path: string;
+  format: string;
+  rows: number;
+}
+
+export const POSITION_KEYS = [
+  "gk",
+  "sw",
+  "dl",
+  "dc",
+  "dr",
+  "dm",
+  "ml",
+  "mc",
+  "mr",
+  "aml",
+  "amc",
+  "amr",
+  "stc",
+  "wbl",
+  "wbr",
+] as const;
+
+export const POSITION_LABELS: Record<string, string> = {
+  gk: "GK",
+  sw: "SW",
+  dl: "DL",
+  dc: "DC",
+  dr: "DR",
+  dm: "DM",
+  ml: "ML",
+  mc: "MC",
+  mr: "MR",
+  aml: "AML",
+  amc: "AMC",
+  amr: "AMR",
+  stc: "ST",
+  wbl: "WBL",
+  wbr: "WBR",
+};
+
+export const ATTRIBUTE_GROUPS: Record<string, { label: string; keys: string[] }[]> = {
+  technical: [
+    {
+      label: "技术",
+      keys: [
+        "corners",
+        "crossing",
+        "dribbling",
+        "finishing",
+        "first_touch",
+        "free_kick_taking",
+        "heading",
+        "long_shots",
+        "long_throws",
+        "marking",
+        "passing",
+        "penalty_taking",
+        "tackling",
+        "technique",
+      ],
+    },
+    {
+      label: "精神",
+      keys: [
+        "aggression",
+        "anticipation",
+        "bravery",
+        "composure",
+        "concentration",
+        "decisions",
+        "determination",
+        "flair",
+        "leadership",
+        "off_the_ball",
+        "positioning",
+        "teamwork",
+        "vision",
+        "work_rate",
+      ],
+    },
+    {
+      label: "身体",
+      keys: [
+        "acceleration",
+        "agility",
+        "balance",
+        "jumping_reach",
+        "natural_fitness",
+        "pace",
+        "stamina",
+        "strength",
+      ],
+    },
+  ],
+  goalkeeping: [
+    {
+      label: "门将",
+      keys: [
+        "aerial_reach",
+        "command_of_area",
+        "communication",
+        "eccentricity",
+        "handling",
+        "kicking",
+        "one_on_ones",
+        "punching",
+        "reflexes",
+        "rushing_out",
+        "throwing",
+      ],
+    },
+  ],
+  hidden: [
+    {
+      label: "隐藏属性",
+      keys: [
+        "consistency",
+        "dirtiness",
+        "important_matches",
+        "injury_proneness",
+        "versatility",
+      ],
+    },
+  ],
+};
+
+export const ATTRIBUTE_LABELS: Record<string, string> = {
+  crossing: "传中",
+  dribbling: "盘带",
+  finishing: "射门",
+  heading: "头球",
+  long_shots: "远射",
+  marking: "盯人",
+  off_the_ball: "无球跑动",
+  passing: "传球",
+  penalty_taking: "点球",
+  tackling: "抢断",
+  vision: "视野",
+  handling: "手控球",
+  aerial_reach: "制空",
+  command_of_area: "指挥防守",
+  communication: "交流",
+  kicking: "开球",
+  throwing: "手抛球",
+  anticipation: "预判",
+  decisions: "决断",
+  one_on_ones: "一对一",
+  positioning: "位置感",
+  reflexes: "反应",
+  first_touch: "停球",
+  technique: "技术",
+  flair: "才华",
+  corners: "角球",
+  teamwork: "团队合作",
+  work_rate: "工作投入",
+  long_throws: "长界外球",
+  eccentricity: "神经刀",
+  rushing_out: "出击",
+  punching: "击球",
+  acceleration: "加速",
+  free_kick_taking: "任意球",
+  strength: "力量",
+  stamina: "耐力",
+  pace: "速度",
+  jumping_reach: "弹跳",
+  leadership: "领导力",
+  dirtiness: "肮脏",
+  balance: "平衡",
+  bravery: "勇敢",
+  consistency: "稳定",
+  aggression: "侵略性",
+  agility: "敏捷",
+  important_matches: "大赛",
+  injury_proneness: "受伤倾向",
+  versatility: "多面性",
+  natural_fitness: "体质",
+  determination: "意志力",
+  composure: "冷静",
+  concentration: "专注",
+};

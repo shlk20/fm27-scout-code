@@ -1,0 +1,379 @@
+import type {
+  Attributes,
+  FilterOptions,
+  Player,
+  PlayerQuery,
+  PlayerRow,
+  Positions,
+  SaveRecord,
+  SaveSummary,
+  Trait,
+} from "./types";
+
+export const MOCK_SAVE_ID = 1;
+
+const FIRST_NAMES = [
+  "Luka", "Mateo", "Andrea", "Nico", "Rafael", "Tommaso", "Elias", "Jonas",
+  "Noah", "Liam", "Oscar", "Hugo", "Theo", "Lucas", "Milan", "Ivan",
+  "Sami", "Youssef", "Karim", "Amine", "Kenji", "Min-jun", "Diego", "Pablo",
+  "Facundo", "Santiago", "Bruno", "Pedro", "João", "Rúben", "Kai", "Finn",
+];
+const LAST_NAMES = [
+  "Modrić", "Barella", "Pavard", "Ramos", "Silva", "Costa", "Nielsen", "Berg",
+  "Müller", "Schmidt", "Rossi", "Ricci", "Dubois", "Moreau", "Santos", "Ferreira",
+  "Kovač", "Petrović", "Ali", "Hassan", "Tanaka", "Kim", "García", "López",
+  "Fernández", "Romero", "Almeida", "Carvalho", "Nakamura", "Sørensen", "Okafor", "Mensah",
+];
+const CLUBS: [string, number, number][] = [
+  ["Casciavit Milano", 1099, 150],
+  ["Barcelona", 1708, 173],
+  ["Manchester United", 728, 139],
+  ["Tottenham Hotspur", 728, 139],
+  ["Juventus", 1139, 164],
+  ["Inter", 1107, 164],
+  ["Bayern München", 1852, 164],
+  ["Paris Saint-Germain", 1063, 168],
+  ["Rangers", 1570, 181],
+  ["RSC Anderlecht", 256, 138],
+  ["Ajax", 992, 156],
+  ["Benfica", 1610, 177],
+  ["River Plate", 1745, 11],
+  ["Flamengo", 1820, 23],
+];
+const NATIONS = [135, 150, 164, 139, 173, 168, 181, 138, 156, 177, 11, 23, 70, 216, 126];
+const POSITION_SETS: [string, string][] = [
+  ["MC", "DM"], ["DC", ""], ["STC", ""], ["AML", "AMC"], ["DR", "WBR"],
+  ["DL", "WBL"], ["GK", ""], ["AMC", "MC"], ["MR", "AMR"], ["DM", "MC"],
+];
+const TRAITS: Trait[] = [
+  { bit: 8, name: "Shoots From Distance" },
+  { bit: 19, name: "Comes Deep To Get Ball" },
+  { bit: 22, name: "Dictates Tempo" },
+  { bit: 34, name: "Avoids Using Weaker Foot" },
+  { bit: 51, name: "Runs With Ball Often" },
+];
+const ATTR_KEYS = Object.keys({
+  crossing: 1, dribbling: 1, finishing: 1, heading: 1, long_shots: 1, marking: 1,
+  off_the_ball: 1, passing: 1, penalty_taking: 1, tackling: 1, vision: 1, handling: 1,
+  aerial_reach: 1, command_of_area: 1, communication: 1, kicking: 1, throwing: 1,
+  anticipation: 1, decisions: 1, one_on_ones: 1, positioning: 1, reflexes: 1,
+  first_touch: 1, technique: 1, flair: 1, corners: 1, teamwork: 1, work_rate: 1,
+  long_throws: 1, eccentricity: 1, rushing_out: 1, punching: 1, acceleration: 1,
+  free_kick_taking: 1, strength: 1, stamina: 1, pace: 1, jumping_reach: 1, leadership: 1,
+  dirtiness: 1, balance: 1, bravery: 1, consistency: 1, aggression: 1, agility: 1,
+  important_matches: 1, injury_proneness: 1, versatility: 1, natural_fitness: 1,
+  determination: 1, composure: 1, concentration: 1,
+});
+
+function rng(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0xffffffff;
+  };
+}
+
+function emptyPositions(): Positions {
+  return {
+    gk: 1, sw: 1, dl: 1, dc: 1, dr: 1, dm: 1, ml: 1, mc: 1, mr: 1,
+    aml: 1, amc: 1, amr: 1, stc: 1, wbl: 1, wbr: 1,
+  };
+}
+
+function buildPlayer(index: number): Player {
+  const random = rng(index + 7);
+  const first = FIRST_NAMES[index % FIRST_NAMES.length];
+  const last = LAST_NAMES[(index * 7 + 3) % LAST_NAMES.length];
+  const [club, clubUid, nation] = CLUBS[index % CLUBS.length];
+  const [pos1, pos2] = POSITION_SETS[index % POSITION_SETS.length];
+  const isKeeper = pos1 === "GK";
+  const ca = index === 0 ? 158 : Math.round(70 + random() * 110);
+  const pa = index === 0 ? 180 : Math.max(ca, Math.min(200, ca + Math.round(random() * 35)));
+  const age = index === 0 ? 40 : Math.round(16 + random() * 23);
+  const positions = emptyPositions();
+  const key = pos1.toLowerCase() as keyof Positions;
+  positions[key] = 20;
+  if (pos2) positions[pos2.toLowerCase() as keyof Positions] = 17 + Math.round(random() * 2);
+  const attributes: Attributes = {};
+  for (const attr of ATTR_KEYS) {
+    const base = isKeeper && !["handling", "aerial_reach", "command_of_area", "communication", "kicking", "throwing", "one_on_ones", "reflexes", "rushing_out", "punching", "eccentricity"].includes(attr)
+      ? 2 + Math.round(random() * 8)
+      : Math.round(5 + random() * 15);
+    attributes[attr] = base;
+  }
+  if (index === 0) {
+    Object.assign(attributes, {
+      crossing: 15, dribbling: 16, finishing: 10, heading: 7, long_shots: 13, marking: 7,
+      off_the_ball: 15, passing: 18, penalty_taking: 14, tackling: 9, vision: 19,
+      first_touch: 19, technique: 19, flair: 15, corners: 16, teamwork: 16, work_rate: 14,
+      acceleration: 11, strength: 8, stamina: 9, pace: 11, leadership: 18, dirtiness: 12,
+      balance: 14, bravery: 14, consistency: 17, important_matches: 18, injury_proneness: 5,
+      versatility: 16, natural_fitness: 16, determination: 17, composure: 18, concentration: 18,
+    });
+  }
+  const raw: Attributes = {};
+  for (const attr of ATTR_KEYS) raw[attr] = Math.min(100, attributes[attr] * 5 - 2);
+  const contractEnd = index === 0 ? "2027-06-30" : `${2027 + (index % 4)}-06-30`;
+  const wage = index === 0 ? 106965 : Math.round(500 + random() * 80000);
+  const value = index === 0 ? 4408650 : Math.round(10000 + random() * 60000000);
+  return {
+    uid: 100000 + index,
+    unique_id: 653054 + index,
+    name: index === 0 ? "Luka Modrić" : `${first} ${last}`,
+    first_name: first,
+    last_name: last,
+    common_name: null,
+    full_name: `${first} ${last}`,
+    legal_name: null,
+    birth_date: index === 0 ? "1985-09-09" : `${2006 - (index % 20)}-0${1 + (index % 9)}-1${index % 9}`,
+    age,
+    nation_id: nation,
+    second_nation_ids: [],
+    home_grown_nation_ids: [nation],
+    home_grown_club_uids: [clubUid],
+    home_grown_club_names: [club],
+    height_cm: index === 0 ? 172 : Math.round(165 + random() * 30),
+    ca,
+    pa,
+    pa_range_code: null,
+    reputation: { bucket: 80 + (index % 90), home: 3000, current: 2500, world: 1500 },
+    club_uid: clubUid,
+    club_name: club,
+    club_short_name: club.split(" ")[0],
+    club_nation_id: nation,
+    club_fa_nation_id: nation,
+    club_reputation: 7000,
+    club_last_league_position: 1 + (index % 18),
+    team_id: 800 + index,
+    team_slot: 0,
+    club_join_date: "2025-07-14",
+    natural_positions: pos2 ? [pos1, pos2] : [pos1],
+    accomplished_positions: [],
+    personality: {
+      adaptability: 10 + (index % 10),
+      ambition: 8 + (index % 12),
+      loyalty: 9 + (index % 11),
+      pressure: 7 + (index % 13),
+      professionalism: index === 0 ? 20 : 8 + (index % 12),
+      sportsmanship: 7 + (index % 13),
+      temperament: 8 + (index % 12),
+      controversy: index % 12,
+    },
+    attributes,
+    raw_attributes: raw,
+    left_foot: 5 + (index % 15),
+    right_foot: 20,
+    raw_left_foot: 25,
+    raw_right_foot: 100,
+    positions,
+    transfer_value: value,
+    transfer_value_state: "ok",
+    raw_condition: 7000,
+    raw_match_sharpness: 7500,
+    traits: index % 4 === 0 ? TRAITS : [],
+    trait_bits: null,
+    on_loan: index % 17 === 0,
+    loan_parent_club_uid: index % 17 === 0 ? 728 : null,
+    loan_parent_club_name: index % 17 === 0 ? "Tottenham Hotspur" : null,
+    loan_start: index % 17 === 0 ? "2026-07-13" : null,
+    loan_end: index % 17 === 0 ? "2027-06-30" : null,
+    contract: {
+      club_uid: clubUid,
+      club_name: club,
+      team_id: 800 + index,
+      wage,
+      start: "2026-06-30",
+      end: contractEnd,
+      squad_status: 2,
+      contract_type: 1,
+      clauses: [],
+      on_loan: index % 17 === 0,
+      loan_parent_club_uid: index % 17 === 0 ? 728 : null,
+      loan_parent_club_name: index % 17 === 0 ? "Tottenham Hotspur" : null,
+      loan_start: index % 17 === 0 ? "2026-07-13" : null,
+      loan_end: index % 17 === 0 ? "2027-06-30" : null,
+      chain: [
+        {
+          club_uid: clubUid,
+          club_name: club,
+          team_id: 800 + index,
+          wage,
+          start: "2026-06-30",
+          end: contractEnd,
+          has_terms: true,
+        },
+      ],
+    },
+  } as Player;
+}
+
+export const MOCK_PLAYERS: Player[] = Array.from({ length: 320 }, (_, index) => buildPlayer(index));
+
+export const MOCK_SUMMARY: SaveSummary = {
+  path: "/Users/demo/Library/Application Support/Sports Interactive/Football Manager 27/games/BB KING - Casciavit.fm",
+  file_name: "BB KING - Casciavit.fm",
+  file_size: 49042131,
+  mtime_ns: 1793328187036747886,
+  fingerprint: "demo",
+  save_name: "BB KING - Casciavit",
+  game: "FM27",
+  build: "27.0.0+2486695",
+  game_date: "2026-07-13",
+  db_version: "27.0.0+0",
+  section_count: 75,
+  decompressed_bytes: 192548055,
+};
+
+export const MOCK_SAVE: SaveRecord = {
+  id: MOCK_SAVE_ID,
+  path: MOCK_SUMMARY.path,
+  file_name: MOCK_SUMMARY.file_name,
+  game: MOCK_SUMMARY.game,
+  build: MOCK_SUMMARY.build,
+  game_date: MOCK_SUMMARY.game_date,
+  parser_version: "0.1.0",
+  parsed_at: new Date().toISOString(),
+  players: MOCK_PLAYERS.length,
+  clubs: CLUBS.length,
+  contracts: MOCK_PLAYERS.length,
+};
+
+export function mockPlayerRow(player: Player): PlayerRow {
+  const positionsText = player.natural_positions.join(" / ");
+  return {
+    uid: player.uid,
+    name: player.name,
+    age: player.age,
+    club_uid: player.club_uid,
+    club_name: player.club_name,
+    nation_id: player.nation_id,
+    ca: player.ca,
+    pa: player.pa,
+    pa_range_code: player.pa_range_code,
+    positions_text: positionsText,
+    positions: player.positions,
+    attributes: player.attributes,
+    personality: player.personality,
+    transfer_value: player.transfer_value,
+    transfer_value_state: player.transfer_value_state,
+    wage: player.contract?.wage ?? null,
+    contract_end: player.contract?.end ?? null,
+    height_cm: player.height_cm,
+    left_foot: player.left_foot,
+    right_foot: player.right_foot,
+    on_loan: player.on_loan,
+    traits: player.traits,
+  };
+}
+
+export function mockFilterOptions(): FilterOptions {
+  const clubCounts = new Map<string, { id: number; name: string; count: number }>();
+  for (const player of MOCK_PLAYERS) {
+    if (player.club_uid == null || !player.club_name) continue;
+    const entry = clubCounts.get(player.club_name) ?? {
+      id: player.club_uid,
+      name: player.club_name,
+      count: 0,
+    };
+    entry.count += 1;
+    clubCounts.set(player.club_name, entry);
+  }
+  const nationCounts = new Map<number, number>();
+  for (const player of MOCK_PLAYERS) {
+    if (player.nation_id != null) {
+      nationCounts.set(player.nation_id, (nationCounts.get(player.nation_id) ?? 0) + 1);
+    }
+  }
+  return {
+    clubs: [...clubCounts.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    nations: [...nationCounts.entries()].map(([id, count]) => ({
+      id,
+      name: `Nation ${id}`,
+      count,
+    })),
+    min_age: 16,
+    max_age: 40,
+    min_ca: 70,
+    max_ca: 180,
+    min_pa: 70,
+    max_pa: 200,
+    min_value: 10000,
+    max_value: 60000000,
+    min_wage: 500,
+    max_wage: 200000,
+  };
+}
+
+export function mockQuery(query: PlayerQuery): {
+  total: number;
+  page: number;
+  page_size: number;
+  rows: PlayerRow[];
+} {
+  let rows = MOCK_PLAYERS.map(mockPlayerRow);
+  const search = query.search?.trim().toLowerCase();
+  if (search) {
+    rows = rows.filter(
+      (row) =>
+        row.name?.toLowerCase().includes(search) ||
+        row.club_name?.toLowerCase().includes(search),
+    );
+  }
+  if (query.uids?.length) rows = rows.filter((row) => query.uids!.includes(row.uid));
+  if (query.club_uids?.length) rows = rows.filter((row) => query.club_uids!.includes(row.club_uid ?? -1));
+  if (query.nation_ids?.length) rows = rows.filter((row) => query.nation_ids!.includes(row.nation_id ?? -1));
+  if (query.age_min != null) rows = rows.filter((row) => (row.age ?? 0) >= query.age_min!);
+  if (query.age_max != null) rows = rows.filter((row) => (row.age ?? 999) <= query.age_max!);
+  if (query.ca_min != null) rows = rows.filter((row) => row.ca >= query.ca_min!);
+  if (query.ca_max != null) rows = rows.filter((row) => row.ca <= query.ca_max!);
+  if (query.pa_min != null) rows = rows.filter((row) => (row.pa ?? 0) >= query.pa_min!);
+  if (query.pa_max != null) rows = rows.filter((row) => (row.pa ?? 999) <= query.pa_max!);
+  if (query.pa_unknown === true) rows = rows.filter((row) => row.pa_range_code != null);
+  if (query.positions?.length) {
+    const threshold = query.position_min ?? 15;
+    rows = rows.filter((row) =>
+      query.positions!.some((key) => (row.positions as unknown as Record<string, number>)[key] >= threshold),
+    );
+  }
+  for (const filter of query.attributes ?? []) {
+    rows = rows.filter((row) => {
+      const value = row.attributes[filter.key] ?? 0;
+      return (filter.min == null || value >= filter.min) && (filter.max == null || value <= filter.max);
+    });
+  }
+  if (query.value_min != null) rows = rows.filter((row) => (row.transfer_value ?? 0) >= query.value_min!);
+  if (query.value_max != null) rows = rows.filter((row) => (row.transfer_value ?? 0) <= query.value_max!);
+  if (query.wage_min != null) rows = rows.filter((row) => (row.wage ?? 0) >= query.wage_min!);
+  if (query.wage_max != null) rows = rows.filter((row) => (row.wage ?? 0) <= query.wage_max!);
+  if (query.on_loan != null) rows = rows.filter((row) => row.on_loan === query.on_loan);
+  const sortBy = query.sort_by ?? "ca";
+  const direction = query.sort_dir === "asc" ? 1 : -1;
+  rows.sort((a, b) => {
+    const read = (row: PlayerRow): number | string | null => {
+      switch (sortBy) {
+        case "name": return row.name;
+        case "age": return row.age;
+        case "club": return row.club_name;
+        case "value": return row.transfer_value;
+        case "wage": return row.wage;
+        case "contract_end": return row.contract_end;
+        case "pa": return row.pa;
+        default: return row.ca;
+      }
+    };
+    const left = read(a);
+    const right = read(b);
+    if (left == null) return 1;
+    if (right == null) return -1;
+    return (left > right ? 1 : left < right ? -1 : 0) * direction;
+  });
+  const total = rows.length;
+  const page = query.page ?? 0;
+  const pageSize = query.page_size ?? 150;
+  return {
+    total,
+    page,
+    page_size: pageSize,
+    rows: rows.slice(page * pageSize, (page + 1) * pageSize),
+  };
+}

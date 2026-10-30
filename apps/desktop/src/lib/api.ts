@@ -1,0 +1,149 @@
+import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import type {
+  ExportReport,
+  FilterOptions,
+  OpenSaveResult,
+  ParseProgress,
+  Player,
+  PlayerPage,
+  PlayerQuery,
+  SaveRecord,
+} from "./types";
+import {
+  MOCK_PLAYERS,
+  MOCK_SAVE,
+  MOCK_SAVE_ID,
+  MOCK_SUMMARY,
+  mockFilterOptions,
+  mockQuery,
+} from "./mock";
+
+export const isTauri =
+  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
+export async function listSaves(): Promise<SaveRecord[]> {
+  if (!isTauri) return [MOCK_SAVE];
+  return invoke<SaveRecord[]>("list_saves");
+}
+
+export async function openSave(path: string, force = false): Promise<OpenSaveResult> {
+  if (!isTauri) {
+    return { save_id: MOCK_SAVE_ID, cached: true, summary: MOCK_SUMMARY, report: null };
+  }
+  return invoke<OpenSaveResult>("open_save", { path, force });
+}
+
+export async function queryPlayers(query: PlayerQuery): Promise<PlayerPage> {
+  if (!isTauri) return mockQuery(query);
+  return invoke<PlayerPage>("query_players", { query });
+}
+
+export async function getPlayer(
+  saveId: number,
+  uid: number,
+  includeHidden = false,
+): Promise<Player | null> {
+  if (!isTauri) return MOCK_PLAYERS.find((player) => player.uid === uid) ?? null;
+  return invoke<Player | null>("get_player", { saveId, uid, includeHidden });
+}
+
+export async function getFilterOptions(saveId: number): Promise<FilterOptions> {
+  if (!isTauri) return mockFilterOptions();
+  return invoke<FilterOptions>("get_filter_options", { saveId });
+}
+
+export async function deleteSave(saveId: number): Promise<void> {
+  if (!isTauri) return;
+  return invoke<void>("delete_save", { saveId });
+}
+
+export async function exportPlayers(
+  query: PlayerQuery,
+  format: "csv" | "json",
+  path: string,
+): Promise<ExportReport> {
+  if (!isTauri) {
+    const rows = mockQuery({ ...query, page: 0, page_size: 100000 }).rows;
+    const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = path;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    return { path, format, rows: rows.length };
+  }
+  return invoke<ExportReport>("export_players", { query, format, path });
+}
+
+export async function pickSaveFile(): Promise<string | null> {
+  if (!isTauri) return MOCK_SUMMARY.path;
+  const selected = await open({
+    multiple: false,
+    directory: false,
+    filters: [{ name: "Football Manager 存档", extensions: ["fm"] }],
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
+export async function pickExportFile(
+  defaultName: string,
+  format: "csv" | "json",
+): Promise<string | null> {
+  if (!isTauri) return defaultName;
+  const selected = await save({
+    defaultPath: defaultName,
+    filters: [{ name: format.toUpperCase(), extensions: [format] }],
+  });
+  return selected ?? null;
+}
+
+export async function listenParseProgress(
+  callback: (progress: ParseProgress) => void,
+): Promise<UnlistenFn> {
+  if (!isTauri) return () => undefined;
+  return listen<ParseProgress>("parse://progress", (event) => callback(event.payload));
+}
+
+export async function listenParseDone(
+  callback: (payload: unknown) => void,
+): Promise<UnlistenFn> {
+  if (!isTauri) return () => undefined;
+  return listen("parse://done", (event) => callback(event.payload));
+}
+
+export async function appDataDir(): Promise<string> {
+  if (!isTauri) return "~/Library/Application Support/com.fm27scout.app";
+  const info = await invoke<{ data_dir: string; version: string }>("app_info");
+  return info.data_dir;
+}
+
+export async function listenMenuAction(
+  callback: (action: string) => void,
+): Promise<UnlistenFn> {
+  if (!isTauri) return () => undefined;
+  return listen<string>("menu://action", (event) => callback(event.payload));
+}
+
+export async function listenOpenFile(
+  callback: (path: string) => void,
+): Promise<UnlistenFn> {
+  if (!isTauri) return () => undefined;
+  return listen<string>("open://file", (event) => callback(event.payload));
+}
+
+export async function takePendingOpen(): Promise<string | null> {
+  if (!isTauri) return null;
+  return invoke<string | null>("take_pending_open");
+}
+
+export async function logMessage(message: string): Promise<void> {
+  if (!isTauri) return;
+  try {
+    await invoke("log_message", { message });
+  } catch {
+    // Diagnostics must never break the UI.
+  }
+}

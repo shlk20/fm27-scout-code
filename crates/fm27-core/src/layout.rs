@@ -1,0 +1,336 @@
+//! FM27 27.0.0+2486695 layout constants, ported from the verified fmsave reference
+//! implementation and checked against a real career save.
+
+use chrono::NaiveDate;
+
+pub const GAME: &str = "FM27";
+pub const BUILD: &str = "27.0.0+2486695";
+pub const GAME_DB_SCHEMA: u32 = 4000;
+pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const EARLIEST_YEAR: i32 = 1901;
+pub const LATEST_YEAR: i32 = 2200;
+pub const MISSING_U32: u32 = 0xFFFF_FFFF;
+
+pub const POSITION_NAMES: [&str; 15] = [
+    "GK", "SW", "DL", "DC", "DR", "DM", "ML", "MC", "MR", "AML", "AMC", "AMR", "STC", "WBL", "WBR",
+];
+
+pub const POSITION_KEYS: [&str; 15] = [
+    "gk", "sw", "dl", "dc", "dr", "dm", "ml", "mc", "mr", "aml", "amc", "amr", "stc", "wbl", "wbr",
+];
+
+pub const ATTRIBUTE_KEYS: [&str; 52] = [
+    "crossing",
+    "dribbling",
+    "finishing",
+    "heading",
+    "long_shots",
+    "marking",
+    "off_the_ball",
+    "passing",
+    "penalty_taking",
+    "tackling",
+    "vision",
+    "handling",
+    "aerial_reach",
+    "command_of_area",
+    "communication",
+    "kicking",
+    "throwing",
+    "anticipation",
+    "decisions",
+    "one_on_ones",
+    "positioning",
+    "reflexes",
+    "first_touch",
+    "technique",
+    "flair",
+    "corners",
+    "teamwork",
+    "work_rate",
+    "long_throws",
+    "eccentricity",
+    "rushing_out",
+    "punching",
+    "acceleration",
+    "free_kick_taking",
+    "strength",
+    "stamina",
+    "pace",
+    "jumping_reach",
+    "leadership",
+    "dirtiness",
+    "balance",
+    "bravery",
+    "consistency",
+    "aggression",
+    "agility",
+    "important_matches",
+    "injury_proneness",
+    "versatility",
+    "natural_fitness",
+    "determination",
+    "composure",
+    "concentration",
+];
+
+/// Bit index -> a trait name that has been confirmed in game. Unknown bits keep their index.
+pub const TRAIT_NAMES: [(&str, &str); 16] = [
+    ("runs_with_ball_down_left", "Runs With Ball Down Left"),
+    ("runs_with_ball_down_right", "Runs With Ball Down Right"),
+    (
+        "runs_with_ball_through_centre",
+        "Runs With Ball Through Centre",
+    ),
+    ("moves_into_channels", "Moves Into Channels"),
+    (
+        "gets_forward_whenever_possible",
+        "Gets Forward Whenever Possible",
+    ),
+    ("tries_killer_balls_often", "Tries Killer Balls Often"),
+    ("shoots_from_distance", "Shoots From Distance"),
+    (
+        "likes_to_try_to_beat_offside_trap",
+        "Likes To Try To Beat Offside Trap",
+    ),
+    ("comes_deep_to_get_ball", "Comes Deep To Get Ball"),
+    ("dictates_tempo", "Dictates Tempo"),
+    ("knocks_ball_past_opponent", "Knocks Ball Past Opponent"),
+    ("avoids_using_weaker_foot", "Avoids Using Weaker Foot"),
+    ("dives_into_tackles", "Dives Into Tackles"),
+    ("tries_long_range_passes", "Tries Long Range Passes"),
+    ("runs_with_ball_often", "Runs With Ball Often"),
+    ("crosses_early", "Crosses Early"),
+];
+
+pub fn trait_name(bit: u8) -> Option<&'static str> {
+    let known: [(u8, &str); 16] = [
+        (0, "Runs With Ball Down Left"),
+        (1, "Runs With Ball Down Right"),
+        (2, "Runs With Ball Through Centre"),
+        (4, "Moves Into Channels"),
+        (5, "Gets Forward Whenever Possible"),
+        (7, "Tries Killer Balls Often"),
+        (8, "Shoots From Distance"),
+        (13, "Likes To Try To Beat Offside Trap"),
+        (19, "Comes Deep To Get Ball"),
+        (22, "Dictates Tempo"),
+        (27, "Knocks Ball Past Opponent"),
+        (34, "Avoids Using Weaker Foot"),
+        (37, "Dives Into Tackles"),
+        (43, "Tries Long Range Passes"),
+        (51, "Runs With Ball Often"),
+        (59, "Crosses Early"),
+    ];
+    known
+        .iter()
+        .find_map(|(index, name)| (*index == bit).then_some(*name))
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PlayerLayout;
+
+impl PlayerLayout {
+    pub const MARKER: &'static [u8] = &[0x01, 0x00, 0x6c, 0x07];
+    pub const MARKER_OFFSET: usize = 102;
+    pub const PINDEX_OFFSET: i32 = -19;
+    pub const UID_OFFSET: i32 = -15;
+    pub const UID_COPY_OFFSET: i32 = -11;
+    pub const OBJECT_KIND_OFFSET: i32 = -7;
+    pub const HOME_REPUTATION_OFFSET: i32 = -6;
+    pub const CURRENT_REPUTATION_OFFSET: i32 = -4;
+    pub const WORLD_REPUTATION_OFFSET: i32 = -2;
+    pub const CA_OFFSET: usize = 0;
+    pub const PA_OFFSET: usize = 2;
+    pub const REPUTATION_BUCKET_OFFSET: usize = 8;
+    pub const TEAM_ID_OFFSET: usize = 16;
+    pub const RATINGS_OFFSET: usize = 24;
+    pub const RATINGS_COUNT: usize = 15;
+    pub const ATTRIBUTES_OFFSET: usize = 39;
+    pub const ATTRIBUTE_COUNT: usize = 54;
+    pub const LEFT_FOOT_INDEX: usize = 24;
+    pub const RIGHT_FOOT_INDEX: usize = 25;
+    pub const TRANSFER_VALUE_OFFSET: usize = 93;
+    pub const TRANSFER_VALUE_PLACEHOLDER: u32 = 300_000_000;
+    pub const CLUB_JOIN_DATE_OFFSET: usize = 98;
+    pub const MATCH_SHARPNESS_OFFSET: usize = 106;
+    pub const CONDITION_OFFSET: usize = 110;
+    pub const HEIGHT_OFFSET: usize = 121;
+    pub const DECODE_EXTENT: usize = 122;
+    pub const ALLOCATED_UID_MINIMUM: u32 = 2_000_000_000;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PersonLayout;
+
+impl PersonLayout {
+    pub const WINDOW_START_OFFSET: usize = 100;
+    /// FM27 moved the person block one byte later than FM26.
+    pub const PERSONALITY_OFFSET_FROM_BIRTH: usize = 22;
+    pub const PERSONALITY_COUNT: usize = 8;
+    pub const DATE_ZERO_BYTES_OFFSET_FROM_BIRTH: usize = 15;
+    pub const DATE_ZERO_BYTES_COUNT: usize = 6;
+    pub const NATION_ID_OFFSET_FROM_BIRTH: usize = 14;
+    pub const RELATION_PRESENT_OFFSET_FROM_BIRTH: usize = 38;
+    pub const RELATION_COUNT_OFFSET_FROM_BIRTH: usize = 39;
+    pub const RELATION_ENTRIES_OFFSET_FROM_BIRTH: usize = 40;
+    pub const RELATION_ENTRY_BYTES: usize = 16;
+    pub const LEGAL_NAME_LENGTH_MIN: usize = 2;
+    pub const LEGAL_NAME_LENGTH_MAX: usize = 80;
+    pub const LEGAL_NAME_OFFSET_FROM_BLOCK_START: usize = 19;
+    pub const TRAIT_BITS_OFFSET_FROM_BLOCK_START: i32 = -8;
+    pub const NAME_ID_LIMIT: u32 = 1 << 23;
+    pub const SECOND_NATION_PAIR: (u8, u8) = (8, 9);
+    pub const HOME_GROWN_NATION_PAIR: (u8, u8) = (8, 70);
+    pub const HOME_GROWN_CLUB_PAIR: (u8, u8) = (1, 72);
+    pub const SECOND_NATION_QUALIFIERS: [u8; 2] = [15, 100];
+    pub const RELATION_SENTINEL_VALUE: u8 = 0xFF;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ClubLayout;
+
+impl ClubLayout {
+    pub const ANCHOR: &'static [u8] = &[0xFF, 0xFF, 0xFF, 0xFF];
+    pub const ANCHOR_OFFSET: usize = 17;
+    pub const CLUB_INDEX_OFFSET: usize = 0;
+    pub const UID_OFFSET: usize = 4;
+    pub const UID_COPY_OFFSET: usize = 8;
+    pub const ZERO_BYTE_OFFSET: usize = 12;
+    pub const NATION_OFFSET: usize = 13;
+    pub const FA_NATION_OFFSET: usize = 21;
+    pub const NATION_COPY_OFFSET: usize = 25;
+    pub const CITY_OFFSET: usize = 29;
+    pub const LONG_NAME_OFFSET: usize = 39;
+    pub const NATION_RANGE: (u32, u32) = (0, 999);
+    pub const MAX_NAME_BYTES: usize = 255;
+    pub const STOP_GAP_BYTES: usize = 64 * 1024;
+    pub const NULL_DATE_TRIPLE: [u8; 12] = [1, 0, 0x6c, 0x07, 1, 0, 0x6c, 0x07, 1, 0, 0x6c, 0x07];
+    pub const TEAM_COUNTS_OFFSET: usize = 37;
+    pub const FIRST_ENTRY_BYTES: usize = 25;
+    pub const FIRST_ENTRY_LEAD: u8 = 0x02;
+    pub const SECOND_ENTRY_BYTES: usize = 12;
+    pub const SECOND_ENTRY_LEAD: u8 = 0x01;
+    pub const FILLER_BYTES: usize = 9;
+    pub const TEAM_COUNT_RANGE: (u8, u8) = (1, 8);
+    pub const TEAM_ID_RANGE: (u32, u32) = (1, 3_000_000);
+    pub const AFFILIATE_COUNT_RANGE: (u8, u8) = (0, 8);
+    pub const FLOAT_ANCHOR: [u8; 4] = 1.0f32.to_le_bytes();
+    pub const FLOAT_ANCHOR_OFFSET: usize = 33;
+    pub const MINIMUM_FLOAT_ANCHOR_RECORD_OFFSET: usize = 40;
+    pub const GENDER_OFFSET_FROM_TEAM_COUNT: i32 = -1;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ContractLayout;
+
+impl ContractLayout {
+    pub const TAG: &'static [u8] = &[0x01, 0x00, 0x6c, 0x07];
+    pub const CHAIN_WINDOW_START_OFFSET: i32 = -30;
+    pub const CHAIN_WINDOW_END_OFFSET: i32 = -30;
+    pub const SELECTOR_OFFSET: usize = 5;
+    pub const START_OFFSET: i32 = -19;
+    pub const TEAM_ID_OFFSET: usize = 9;
+    pub const WAGE_OFFSET: usize = 17;
+    pub const TAIL_BASE_OFFSET: usize = 66;
+    pub const TAIL_STEP_BYTES: usize = 29;
+    pub const TAIL_MAX_EVENT_COUNT: usize = 200;
+    pub const TAIL_SENTINEL_BYTE_OFFSET: usize = 3;
+    pub const TAIL_SENTINEL_BYTE_VALUE: u8 = 3;
+    pub const TAIL_SENTINEL_WORD_OFFSET: usize = 4;
+    pub const TAIL_SENTINEL_WORD_VALUE: u32 = 4;
+    pub const TAIL_END_OFFSET: usize = 28;
+    pub const TAIL_PRINTED_START_OFFSET: usize = 32;
+    pub const TAIL_SQUAD_STATUS_OFFSET: usize = 36;
+    pub const TAIL_E24_OFFSET: usize = 24;
+    pub const TAIL_EVENT_COUNT_OFFSET: usize = 42;
+    pub const TAIL_STRUCT_END: usize = 46;
+    pub const LOAN_BLOCK_MAX_EVENT_COUNT: usize = 60;
+    pub const CLAUSE_STEP_BYTES: usize = 8;
+    pub const CLAUSE_MAX_COUNT: usize = 23;
+    pub const CLAUSE_FF_OFFSET: i32 = -16;
+    pub const CLAUSE_FF_COUNT: usize = 8;
+    pub const CLAUSE_ZERO_OFFSET: i32 = -8;
+    pub const CLAUSE_ZERO_COUNT: usize = 3;
+    pub const CLAUSE_COUNT_OFFSET: i32 = -5;
+    pub const CLAUSE_ENTRIES_OFFSET: i32 = -4;
+    pub const CLAUSE_ENTRY_BYTES: usize = 8;
+    pub const CLAUSE_COMPETITION_COUNT_BYTES: usize = 1;
+    pub const CLAUSE_COMPETITION_ITEM_BYTES: usize = 31;
+    pub const CLAUSE_COMPETITION_ITEM_PREFIX: &'static [u8] = &[0x01, 0x00, 0x01, 0x00, 0x6c, 0x07];
+    pub const CLAUSE_COMPETITION_MAX_COUNT: usize = 32;
+    pub const CLAUSE_AWARD_FLAG_BYTES: usize = 1;
+    pub const CLAUSE_AWARD_COUNT_BYTES: usize = 4;
+    pub const CLAUSE_AWARD_ITEM_BYTES: usize = 15;
+    pub const CLAUSE_AWARD_ITEM_PREFIX: &'static [u8] = &[0x01, 0x00];
+    pub const CLAUSE_AWARD_MAX_COUNT: usize = 32;
+    pub const CLAUSE_TRAILER_BYTES: usize = 2;
+    pub const CLAUSE_TEAM_MARKER_ID_BYTES: usize = 4;
+    pub const HEAD_GATE_OFFSET: i32 = -35;
+    pub const HEAD_GATE_VALUE: u16 = 5;
+    pub const HEAD_TYPE_OFFSET: i32 = -33;
+    pub const FALLBACK_START_FROM_RECORD: usize = 110;
+    pub const FALLBACK_END_MARGIN: usize = 90;
+    pub const FALLBACK_NONZERO_OFFSET: usize = 8;
+    pub const FALLBACK_NONZERO_LENGTH: usize = 8;
+    pub const FALLBACK_GATE_LENGTH: usize = 16;
+}
+
+pub const NAME_POOL_SIGNATURE: [u8; 24] = {
+    let mut sig = [0u8; 24];
+    let words: [u32; 6] = [46421, 0, 1024, 256, 2048, 0];
+    let mut i = 0;
+    while i < 6 {
+        let bytes = words[i].to_le_bytes();
+        sig[i * 4] = bytes[0];
+        sig[i * 4 + 1] = bytes[1];
+        sig[i * 4 + 2] = bytes[2];
+        sig[i * 4 + 3] = bytes[3];
+        i += 1;
+    }
+    sig
+};
+pub const NAME_POOL_PREFIX: [u8; 5] = [0x55, 0xb5, 0x00, 0x00, 0x00]; // 46421 = 0xB555
+
+/// Decode a stored game date. `offset` points at the low 16-bit day/slot word.
+pub fn decode_date(bytes: &[u8], offset: usize) -> Option<NaiveDate> {
+    let packed = u16::from_le_bytes(*read_slice::<2>(bytes, offset)?);
+    let year = u16::from_le_bytes(*read_slice::<2>(bytes, offset + 2)?) as i32;
+    let day_of_year = (packed & 0x1FF) as u32;
+    if !(EARLIEST_YEAR..=LATEST_YEAR).contains(&year) {
+        return None;
+    }
+    NaiveDate::from_yo_opt(year, day_of_year)
+}
+
+pub fn fmt_date(date: Option<NaiveDate>) -> Option<String> {
+    date.map(|value| value.format("%Y-%m-%d").to_string())
+}
+
+pub fn read_u16(bytes: &[u8], offset: usize) -> Option<u16> {
+    Some(u16::from_le_bytes(*read_slice::<2>(bytes, offset)?))
+}
+
+pub fn read_u32(bytes: &[u8], offset: usize) -> Option<u32> {
+    Some(u32::from_le_bytes(*read_slice::<4>(bytes, offset)?))
+}
+
+pub fn read_i16(bytes: &[u8], offset: usize) -> Option<i16> {
+    Some(i16::from_le_bytes(*read_slice::<2>(bytes, offset)?))
+}
+
+pub fn read_u64(bytes: &[u8], offset: usize) -> Option<u64> {
+    Some(u64::from_le_bytes(*read_slice::<8>(bytes, offset)?))
+}
+
+pub fn read_u8(bytes: &[u8], offset: usize) -> Option<u8> {
+    bytes.get(offset).copied()
+}
+
+fn read_slice<const N: usize>(bytes: &[u8], offset: usize) -> Option<&[u8; N]> {
+    bytes.get(offset..offset + N)?.try_into().ok()
+}
+
+pub fn scale_attribute(raw: u8) -> u8 {
+    std::cmp::max(1, (raw as u16 + 2) / 5) as u8
+}

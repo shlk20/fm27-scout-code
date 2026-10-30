@@ -1,0 +1,520 @@
+//! End-to-end parsing of one save into normalized player and club rows.
+
+use std::collections::HashMap;
+use std::path::Path;
+use std::time::Instant;
+
+use chrono::NaiveDate;
+use serde::Serialize;
+
+use crate::clubs::ClubIndex;
+use crate::container::SaveFile;
+use crate::contracts::ContractDecoder;
+use crate::error::{Error, Result};
+use crate::layout::{
+    ATTRIBUTE_KEYS, MISSING_U32, PARSER_VERSION, POSITION_NAMES, PlayerLayout, decode_date,
+    read_i16, read_u8, read_u16, read_u32, scale_attribute,
+};
+use crate::metadata::{SaveMetadata, read_metadata};
+use crate::model::{
+    Attributes, Club, ParseReport, Player, Positions, Reputation, SaveSummary, TransferValueState,
+};
+use crate::names::NamePools;
+use crate::persons::{ClubLookup, PersonDecoder};
+use crate::player_scan::PlayerRecords;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ParseProgress {
+    pub stage: String,
+    pub current: usize,
+    pub total: usize,
+    pub message: String,
+}
+
+#[derive(Debug)]
+pub struct ParsedSave {
+    pub metadata: SaveMetadata,
+    pub summary: SaveSummary,
+    pub players: Vec<Player>,
+    pub clubs: Vec<Club>,
+    pub report: ParseReport,
+}
+
+pub fn parse_save(path: impl AsRef<Path>) -> Result<ParsedSave> {
+    parse_save_with_progress(path, |_| {})
+}
+
+pub fn parse_save_with_progress(
+    path: impl AsRef<Path>,
+    mut progress: impl FnMut(ParseProgress),
+) -> Result<ParsedSave> {
+    let started = Instant::now();
+    progress(ParseProgress {
+        stage: "opening".to_owned(),
+        current: 0,
+        total: 0,
+        message: "正在读取存档容器".to_owned(),
+    });
+    let path = path.as_ref();
+    let save = SaveFile::open(path)?;
+    let metadata = read_metadata(&save)?;
+    progress(ParseProgress {
+        stage: "game_db".to_owned(),
+        current: 0,
+        total: 0,
+        message: "正在解压 game_db".to_owned(),
+    });
+    let game_db = save.read_section("game_db")?;
+    progress(ParseProgress {
+        stage: "names".to_owned(),
+        current: 0,
+        total: 0,
+        message: "正在定位姓名池".to_owned(),
+    });
+    let names = NamePools::locate(&game_db)?;
+    progress(ParseProgress {
+        stage: "players".to_owned(),
+        current: 0,
+        total: 0,
+        message: "正在扫描球员记录".to_owned(),
+    });
+    let record_index = PlayerRecords::locate(&game_db, names.end_offset)?;
+    progress(ParseProgress {
+        stage: "clubs".to_owned(),
+        current: 0,
+        total: 0,
+        message: "正在解析俱乐部与球队".to_owned(),
+    });
+    let clubs = ClubIndex::read(&game_db)?;
+
+    let reference_date = metadata
+        .game_date
+        .as_deref()
+        .and_then(|text| NaiveDate::parse_from_str(text, "%Y-%m-%d").ok())
+        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 7, 1).unwrap());
+
+    let club_lookup = ClubLookup {
+        name_by_uid: &clubs.name_by_uid,
+        uid_by_index: &clubs.uid_by_index,
+    };
+    let person_decoder = PersonDecoder {
+        names: &names,
+        clubs: club_lookup,
+        clock: reference_date,
+    };
+    let contract_decoder = ContractDecoder {
+        club_names: &clubs.name_by_uid,
+        club_by_team: &clubs.fielding_team_to_club,
+        clock: reference_date,
+    };
+
+    let mut players = Vec::with_capacity(record_index.records.len());
+    let mut warnings = Vec::new();
+    let mut with_person = 0usize;
+    let mut with_club = 0usize;
+    let mut with_contract = 0usize;
+
+    for position in 0..record_index.records.len() {
+        if position % 5000 == 0 {
+            progress(ParseProgress {
+                stage: "decode".to_owned(),
+                current: position,
+                total: record_index.records.len(),
+                message: format!("正在解码球员 {}/{}", position, record_index.records.len()),
+            });
+        }
+        let record = record_index.records[position];
+        let offset = record.offset;
+        let window_end = record_index.window_end(position, game_db.len());
+        let next_uid = record_index.records.get(position + 1).map(|next| next.uid);
+
+        let team_id_raw =
+            read_u32(&game_db, offset + PlayerLayout::TEAM_ID_OFFSET).unwrap_or(MISSING_U32);
+        let team_id = (team_id_raw != MISSING_U32).then_some(team_id_raw);
+        let team_fields = team_id.and_then(|team| clubs.team_fields(team));
+
+        let (
+            club_uid,
+            club_name,
+            club_short_name,
+            club_nation_id,
+            club_fa_nation_id,
+            club_reputation,
+            club_last_league_position,
+            team_slot,
+        ) = match team_fields {
+            Some((uid, club, slot)) => (
+                Some(uid),
+                Some(club.name.clone()),
+                Some(club.short_name.clone()),
+                Some(club.nation_id),
+                Some(club.fa_nation_id),
+                club.reputation,
+                club.last_league_position,
+                Some(slot),
+            ),
+            None => (None, None, None, None, None, None, None, None),
+        };
+
+        let closing = closing_person_header(
+            &game_db,
+            record.pindex,
+            offset + PlayerLayout::DECODE_EXTENT,
+            window_end,
+            record.uid,
+            next_uid,
+        );
+        let unique_id = closing.map(|(_, uid)| uid);
+        let person_end = closing.map_or(window_end, |(at, _)| at);
+        let person = person_decoder.decode(&game_db, offset + 100, person_end);
+        if person.is_some() {
+            with_person += 1;
+        }
+        if club_uid.is_some() {
+            with_club += 1;
+        }
+
+        let contract = contract_decoder.decode(
+            &game_db,
+            offset,
+            window_end,
+            position + 1 == record_index.records.len(),
+            record.pindex,
+            club_uid,
+        );
+        if contract.is_some() {
+            with_contract += 1;
+        }
+
+        let raw_left_foot = read_u8(
+            &game_db,
+            offset + PlayerLayout::ATTRIBUTES_OFFSET + PlayerLayout::LEFT_FOOT_INDEX,
+        )
+        .unwrap_or(0);
+        let raw_right_foot = read_u8(
+            &game_db,
+            offset + PlayerLayout::ATTRIBUTES_OFFSET + PlayerLayout::RIGHT_FOOT_INDEX,
+        )
+        .unwrap_or(0);
+
+        let mut raw_attributes = Attributes::default();
+        let mut attributes = Attributes::default();
+        let attribute_start = offset + PlayerLayout::ATTRIBUTES_OFFSET;
+        for (index, _key) in ATTRIBUTE_KEYS.iter().enumerate() {
+            // The stored 54-byte slice contains two foot bytes at indices 24 and 25.
+            let stored_index = if index < PlayerLayout::LEFT_FOOT_INDEX {
+                index
+            } else {
+                index + 2
+            };
+            let raw = read_u8(&game_db, attribute_start + stored_index).unwrap_or(0);
+            raw_attributes.values[index] = raw;
+            attributes.values[index] = scale_attribute(raw);
+        }
+
+        let mut positions = Positions::default();
+        for index in 0..PlayerLayout::RATINGS_COUNT {
+            positions.values[index] =
+                read_u8(&game_db, offset + PlayerLayout::RATINGS_OFFSET + index).unwrap_or(1);
+        }
+        let (natural_positions, accomplished_positions) = derive_positions(&positions.values);
+
+        let raw_pa = read_i16(&game_db, offset + PlayerLayout::PA_OFFSET).unwrap_or(-1);
+        let (pa, pa_range_code) = if raw_pa < 0 {
+            (None, Some(raw_pa))
+        } else {
+            (Some(raw_pa), None)
+        };
+        let ca = read_u16(&game_db, offset + PlayerLayout::CA_OFFSET).unwrap_or(0);
+        let transfer_value_raw =
+            read_u32(&game_db, offset + PlayerLayout::TRANSFER_VALUE_OFFSET).unwrap_or(MISSING_U32);
+        let (transfer_value, transfer_value_state) = match transfer_value_raw {
+            MISSING_U32 => (None, TransferValueState::Unset),
+            PlayerLayout::TRANSFER_VALUE_PLACEHOLDER => (None, TransferValueState::Placeholder),
+            0 => (None, TransferValueState::Zero),
+            value => (Some(value), TransferValueState::Ok),
+        };
+
+        let (
+            person_name,
+            first_name,
+            last_name,
+            common_name,
+            full_name,
+            legal_name,
+            birth_date,
+            age,
+            nation_id,
+            second_nation_ids,
+            home_grown_nation_ids,
+            home_grown_club_uids,
+            home_grown_club_names,
+            personality,
+            trait_bits,
+            traits,
+        ) = match person {
+            Some(person) => (
+                person.name,
+                person.first_name,
+                person.last_name,
+                person.common_name,
+                person.full_name,
+                person.legal_name,
+                person.birth_date,
+                person.age,
+                Some(person.nation_id),
+                person.second_nation_ids,
+                person.home_grown_nation_ids,
+                person.home_grown_club_uids,
+                person.home_grown_club_names,
+                Some(person.personality),
+                Some(person.trait_bits),
+                person.traits,
+            ),
+            None => (
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                None,
+                None,
+                Vec::new(),
+            ),
+        };
+
+        let reputation = Reputation {
+            bucket: read_u8(&game_db, offset + PlayerLayout::REPUTATION_BUCKET_OFFSET).unwrap_or(0),
+            home: read_u16(&game_db, offset - 6).unwrap_or(0),
+            current: read_u16(&game_db, offset - 4).unwrap_or(0),
+            world: read_u16(&game_db, offset - 2).unwrap_or(0),
+        };
+        let club_join_date = decode_date(&game_db, offset + PlayerLayout::CLUB_JOIN_DATE_OFFSET);
+        let height_cm = read_u8(&game_db, offset + PlayerLayout::HEIGHT_OFFSET).unwrap_or(0);
+        let raw_condition =
+            read_u16(&game_db, offset + PlayerLayout::CONDITION_OFFSET).unwrap_or(0);
+        let raw_match_sharpness =
+            read_u16(&game_db, offset + PlayerLayout::MATCH_SHARPNESS_OFFSET).unwrap_or(0);
+
+        let (on_loan, loan_parent_club_uid, loan_parent_club_name, loan_start, loan_end) =
+            match &contract {
+                Some(contract) => (
+                    contract.on_loan,
+                    contract.loan_parent_club_uid,
+                    contract.loan_parent_club_name.clone(),
+                    contract.loan_start.clone(),
+                    contract.loan_end.clone(),
+                ),
+                None => (None, None, None, None, None),
+            };
+
+        players.push(Player {
+            uid: record.uid,
+            unique_id,
+            name: person_name,
+            first_name,
+            last_name,
+            common_name,
+            full_name,
+            legal_name,
+            birth_date: birth_date.map(|date| date.to_string()),
+            age,
+            nation_id,
+            second_nation_ids,
+            home_grown_nation_ids,
+            home_grown_club_uids,
+            home_grown_club_names,
+            height_cm,
+            ca,
+            pa,
+            pa_range_code,
+            reputation,
+            club_uid,
+            club_name,
+            club_short_name,
+            club_nation_id,
+            club_fa_nation_id,
+            club_reputation,
+            club_last_league_position,
+            team_id,
+            team_slot,
+            club_join_date: club_join_date.map(|date| date.to_string()),
+            natural_positions,
+            accomplished_positions,
+            personality,
+            attributes,
+            raw_attributes,
+            left_foot: scale_attribute(raw_left_foot),
+            right_foot: scale_attribute(raw_right_foot),
+            raw_left_foot,
+            raw_right_foot,
+            positions,
+            transfer_value,
+            transfer_value_state,
+            raw_condition,
+            raw_match_sharpness,
+            traits,
+            trait_bits,
+            on_loan,
+            loan_parent_club_uid,
+            loan_parent_club_name,
+            loan_start,
+            loan_end,
+            contract,
+        });
+    }
+
+    if record_index.markerless > 0 {
+        warnings.push(format!(
+            "{} player records were found only by the completeness scan",
+            record_index.markerless
+        ));
+    }
+    if players.is_empty() {
+        return Err(Error::parse("no players decoded"));
+    }
+
+    progress(ParseProgress {
+        stage: "done".to_owned(),
+        current: players.len(),
+        total: players.len(),
+        message: "解析完成".to_owned(),
+    });
+    let elapsed_ms = started.elapsed().as_millis();
+    let summary = SaveSummary {
+        path: path.display().to_string(),
+        file_name: path
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        file_size: save.fingerprint.file_size,
+        mtime_ns: save.fingerprint.mtime_ns,
+        fingerprint: save.fingerprint.digest.clone(),
+        save_name: save.save_name.clone(),
+        game: metadata.game.clone(),
+        build: metadata.build.clone(),
+        game_date: metadata.game_date.clone(),
+        db_version: metadata.db_version.clone(),
+        section_count: save
+            .entries
+            .iter()
+            .filter(|entry| entry.is_section())
+            .count(),
+        decompressed_bytes: save.total_declared_bytes(),
+    };
+    let contracts = players
+        .iter()
+        .filter(|player| player.contract.is_some())
+        .count();
+    let report = ParseReport {
+        save: summary.clone(),
+        players: players.len(),
+        clubs: clubs.clubs.len(),
+        contracts,
+        markerless_players: record_index.markerless,
+        players_with_person: with_person,
+        players_with_club: with_club,
+        players_with_contract: with_contract,
+        elapsed_ms,
+        warnings,
+    };
+
+    Ok(ParsedSave {
+        metadata,
+        summary,
+        players,
+        clubs: clubs.clubs,
+        report,
+    })
+}
+
+fn derive_positions(ratings: &[u8; 15]) -> (Vec<String>, Vec<String>) {
+    let mut qualifying: Vec<(u8, usize)> = ratings
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|(_, rating)| *rating >= 15)
+        .map(|(index, rating)| (rating, index))
+        .collect();
+    qualifying.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    let natural = qualifying
+        .iter()
+        .filter(|(rating, _)| *rating >= 18)
+        .map(|(_, index)| POSITION_NAMES[*index].to_owned())
+        .collect();
+    let accomplished = qualifying
+        .iter()
+        .filter(|(rating, _)| *rating < 18)
+        .map(|(_, index)| POSITION_NAMES[*index].to_owned())
+        .collect();
+    (natural, accomplished)
+}
+
+fn closing_person_header(
+    game_db: &[u8],
+    person_id: u32,
+    search_start: usize,
+    search_end: usize,
+    uid_floor: u32,
+    uid_ceiling: Option<u32>,
+) -> Option<(usize, u32)> {
+    if person_id == MISSING_U32 {
+        return None;
+    }
+    let needle = (person_id + 1).to_le_bytes();
+    let mut found = None;
+    let mut search_from = search_start;
+    while let Some(relative) = find_bytes(game_db.get(search_from..search_end)?, &needle) {
+        let hit = search_from + relative;
+        search_from = hit + 1;
+        let Some(uid) = read_u32(game_db, hit + 4) else {
+            continue;
+        };
+        let Some(uid_copy) = read_u32(game_db, hit + 8) else {
+            continue;
+        };
+        if uid != uid_copy || uid == 0 || uid == MISSING_U32 || uid <= uid_floor {
+            continue;
+        }
+        if uid_ceiling.is_some_and(|ceiling| uid > ceiling) {
+            continue;
+        }
+        if found.is_some() {
+            return None;
+        }
+        found = Some((hit, uid));
+    }
+    found
+}
+
+fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() {
+        return Some(0);
+    }
+    if haystack.len() < needle.len() {
+        return None;
+    }
+    haystack
+        .windows(needle.len())
+        .position(|window| window == needle)
+}
+
+pub fn parser_version() -> &'static str {
+    PARSER_VERSION
+}
+
+#[allow(dead_code)]
+fn club_names(clubs: &[Club]) -> HashMap<u32, String> {
+    clubs
+        .iter()
+        .map(|club| (club.uid, club.name.clone()))
+        .collect()
+}

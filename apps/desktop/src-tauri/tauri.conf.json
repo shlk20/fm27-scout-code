@@ -1,0 +1,63 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "FM27 Scout",
+  "version": "0.1.0",
+  "identifier": "com.fm27scout.app",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "FM27 Scout",
+        "width": 1480,
+        "height": 940,
+        "minWidth": 1180,
+        "minHeight": 720,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 18
+        }
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg"
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "Read-only Football Manager 27 scout",
+    "longDescription": "A local, read-only scout for Football Manager 27 saves. No network access, no save modification.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "14.0"
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "fm"
+        ],
+        "name": "Football Manager Save",
+        "description": "Football Manager career save",
+        "mimeType": "application/octet-stream",
+        "role": "Viewer"
+      }
+    ]
+  }
+}
