@@ -103,6 +103,33 @@ export function Label({
   );
 }
 
+export function CheckboxBox({
+  checked,
+  className,
+}: {
+  checked: boolean;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors",
+        checked
+          ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+          : "border-[var(--line-strong)] bg-[var(--surface)]",
+        className,
+      )}
+    >
+      {checked && (
+        <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M2.5 6.2 4.8 8.5 9.5 3.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
 export function Checkbox({
   checked,
   onChange,
@@ -123,20 +150,7 @@ export function Checkbox({
         disabled && "cursor-not-allowed opacity-50",
       )}
     >
-      <span
-        className={cn(
-          "flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors",
-          checked
-            ? "border-[var(--accent)] bg-[var(--accent)] text-white"
-            : "border-[var(--line-strong)] bg-[var(--surface)]",
-        )}
-      >
-        {checked && (
-          <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M2.5 6.2 4.8 8.5 9.5 3.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </span>
+      <CheckboxBox checked={checked} />
       <input
         id={id}
         type="checkbox"

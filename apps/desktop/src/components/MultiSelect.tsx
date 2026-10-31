@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
-import { Checkbox, Input } from "./ui";
+import { CheckboxBox, Input } from "./ui";
 import { useI18n } from "@/lib/useI18n";
 import { cn } from "@/lib/utils";
 import type { FilterOption } from "@/lib/types";
@@ -50,6 +50,19 @@ export function MultiSelect({
     if (names.length <= maxLabel) return names.join(", ");
     return `${names.slice(0, maxLabel).join(", ")} +${names.length - maxLabel}`;
   }, [selected, options, placeholder, maxLabel]);
+
+  const toggle = (id: number) => {
+    if (single) {
+      onChange([id]);
+      setOpen(false);
+      return;
+    }
+    onChange(
+      selected.includes(id)
+        ? selected.filter((value) => value !== id)
+        : [...selected, id],
+    );
+  };
 
   return (
     <div ref={rootRef} className="relative">
@@ -114,31 +127,32 @@ export function MultiSelect({
                 {t("multiSelect.noMatches")}
               </div>
             )}
-            {filtered.slice(0, 250).map((option) => (
-              <div
-                key={option.id}
-                className="flex cursor-pointer items-center justify-between rounded-[6px] px-2 py-1.5 hover:bg-[var(--surface-2)]"
-                onClick={() => {
-                  if (single) {
-                    onChange([option.id]);
-                    setOpen(false);
-                    return;
-                  }
-                  onChange(
-                    selected.includes(option.id)
-                      ? selected.filter((id) => id !== option.id)
-                      : [...selected, option.id],
-                  );
-                }}
-              >
-                <Checkbox
-                  checked={selected.includes(option.id)}
-                  onChange={() => undefined}
-                  label={<span className="text-[11px]">{option.name}</span>}
-                />
-                <span className="font-mono text-[10px] text-[var(--muted)]">{option.count}</span>
-              </div>
-            ))}
+            {filtered.slice(0, 250).map((option) => {
+              const checked = selected.includes(option.id);
+              return (
+                <label
+                  key={option.id}
+                  className="flex cursor-pointer items-center justify-between gap-2 rounded-[6px] px-2 py-1.5 hover:bg-[var(--surface-2)] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--accent)]"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="peer sr-only"
+                      checked={checked}
+                      onChange={() => toggle(option.id)}
+                    />
+                    <CheckboxBox
+                      checked={checked}
+                      className="peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--accent)] peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-[var(--surface)]"
+                    />
+                    <span className="truncate text-[11px] text-[var(--ink)]">{option.name}</span>
+                  </span>
+                  <span className="shrink-0 font-mono text-[10px] text-[var(--muted)]">
+                    {option.count}
+                  </span>
+                </label>
+              );
+            })}
             {filtered.length > 250 && (
               <div className="px-2 py-2 text-center text-[9px] text-[var(--muted)]">
                 {t("multiSelect.limit", { total: filtered.length })}
