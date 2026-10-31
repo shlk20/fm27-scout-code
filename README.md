@@ -8,7 +8,7 @@ A read-only Football Manager 27 scouting tool for macOS: Tauri 2 + Rust parsing 
 
 ## Current status
 
-The 0.2.0 runnable release is complete:
+The 0.2.1 runnable release is complete:
 
 - Reads FM27 `27.0.0+2486695` saves directly; container, zstd and section directories are all parsed by Rust.
 - Supports Finder double-click / drag-and-drop for `.fm` files; a read-only snapshot is copied before parsing so a save in progress cannot be read half-written.
@@ -46,7 +46,7 @@ docs/                  Layout, parser and validation notes
 Locally verified builds:
 
 ```text
-target/universal-apple-darwin/release/bundle/dmg/FM27 Scout_0.2.0_universal.dmg
+target/universal-apple-darwin/release/bundle/dmg/FM27 Scout_0.2.1_universal.dmg
 target/universal-apple-darwin/release/bundle/macos/FM27 Scout.app
 ```
 

@@ -244,7 +244,7 @@ export function SettingsDialog() {
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3 text-[10px] leading-relaxed text-[var(--muted)]">
             <div className="flex items-center gap-2 text-[11px] font-semibold text-[var(--ink)]">
               <Info size={13} />
-              FM27 Scout 0.2.0
+              FM27 Scout 0.2.1
             </div>
             <div className="mt-1">{t("settings.aboutDescription")}</div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">

@@ -8,7 +8,7 @@ macOS 上的 Football Manager 27 只读球探工具：Tauri 2 + Rust 解析核�
 
 ## 当前状态
 
-0.2.0 可运行版本已经完成：
+0.2.1 可运行版本已经完成：
 
 - 直接读取 FM27 `27.0.0+2486695` 存档，容器 / zstd / section 目录全部由 Rust 解析。
 - 支持 Finder 双击 / 拖入 `.fm` 文件；解析前先复制只读快照，避免游戏保存中读到半截文件。
@@ -46,7 +46,7 @@ docs/                  布局、解析与验证说明
 已完成本地验证的构建：
 
 ```text
-target/universal-apple-darwin/release/bundle/dmg/FM27 Scout_0.2.0_universal.dmg
+target/universal-apple-darwin/release/bundle/dmg/FM27 Scout_0.2.1_universal.dmg
 target/universal-apple-darwin/release/bundle/macos/FM27 Scout.app
 ```
 
