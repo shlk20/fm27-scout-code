@@ -1,7 +1,12 @@
-name: Release Universal DMG
+name: Release Unsigned Universal DMG
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (e.g. v0.2.0). Leave empty to use the selected ref; running from a branch then only builds artifacts."
+        required: false
+        type: string
   push:
     tags:
       - "v*"
@@ -11,16 +16,32 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-14
-    env:
-      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    runs-on: macos-15
+    outputs:
+      release_tag: ${{ steps.meta.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Determine release tag
+        id: meta
+        if: github.ref_type == 'tag' || inputs.tag != ''
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          TAG="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          if [[ "$TAG" != v* ]]; then
+            echo "::error::Release tag must start with 'v' (for example v0.2.0), got '$TAG'"
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          CONFIG_VERSION="$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)"
+          if [[ "${VERSION%%-*}" != "$CONFIG_VERSION" ]]; then
+            echo "::error::Tag '$TAG' does not match tauri.conf.json version '$CONFIG_VERSION'. Bump the version before releasing."
+            exit 1
+          fi
+          echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -49,32 +70,93 @@ jobs:
         working-directory: apps/desktop
         run: pnpm test
 
-      - name: Build, sign and notarize Universal DMG
+      - name: Build unsigned Universal DMG
         working-directory: apps/desktop
         run: pnpm tauri build --target universal-apple-darwin --bundles app,dmg
 
-      - name: Verify universal binary
+      - name: Verify universal binary and DMG
         run: |
           APP="target/universal-apple-darwin/release/bundle/macos/FM27 Scout.app"
           BINARY="$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -111 | head -n 1)"
           lipo -info "$BINARY"
-          codesign --verify --deep --strict --verbose=2 "$APP"
-          spctl --assess --type execute --verbose=4 "$APP"
-          xcrun stapler validate "$APP"
+          lipo -archs "$BINARY" | grep -qw arm64
+          lipo -archs "$BINARY" | grep -qw x86_64
           for dmg in target/universal-apple-darwin/release/bundle/dmg/*.dmg; do
-            xcrun stapler validate "$dmg" || echo "warning: DMG has no stapled ticket (app is notarized)"
+            hdiutil verify "$dmg"
           done
 
-      - name: Checksums
+      - name: Prepare release assets
+        env:
+          TAG: ${{ steps.meta.outputs.release_tag }}
         run: |
-          DMG_DIR="target/universal-apple-darwin/release/bundle/dmg"
-          shasum -a 256 "$DMG_DIR"/*.dmg | tee "$DMG_DIR/SHA256SUMS.txt"
+          mkdir -p release-assets
+          cp target/universal-apple-darwin/release/bundle/dmg/*.dmg release-assets/
 
-      - name: Upload DMG
+          if [[ -n "$TAG" ]]; then
+            VERSION="${TAG#v}"
+            git archive --format=zip \
+              --prefix="fm27-scout-${VERSION}/" \
+              -o "release-assets/fm27-scout-${VERSION}-source.zip" HEAD
+          fi
+
+          cd release-assets
+          shopt -s nullglob
+          files=( *.dmg *.zip )
+          shasum -a 256 "${files[@]}" > SHA256SUMS.txt
+
+      - name: Upload release assets
         uses: actions/upload-artifact@v4
         with:
-          name: fm27-scout-universal-dmg
-          path: |
-            target/universal-apple-darwin/release/bundle/dmg/*.dmg
-            target/universal-apple-darwin/release/bundle/dmg/SHA256SUMS.txt
+          name: fm27-scout-release-assets
+          path: release-assets/
           if-no-files-found: error
+
+  release:
+    needs: build
+    if: needs.build.outputs.release_tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: fm27-scout-release-assets
+          path: release-assets
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.build.outputs.release_tag }}
+          RELEASE_NOTES: |
+            > [!WARNING]
+            > 此版本未签名、未公证，首次打开会被 macOS 拦截。
+            > This build is **unsigned and not notarized**; macOS Gatekeeper blocks it on first launch.
+
+            **First launch on macOS**
+
+            1. Open the DMG and drag **FM27 Scout** into **Applications**.
+            2. Try to open the app once.
+            3. Open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway**.
+            4. Confirm **Open**.
+
+            Alternatively, remove the quarantine flag from Terminal:
+
+            ```bash
+            xattr -dr com.apple.quarantine "/Applications/FM27 Scout.app"
+            open "/Applications/FM27 Scout.app"
+            ```
+
+            Only download this build if you trust this repository.
+        run: |
+          cd release-assets
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" ./* --clobber
+          else
+            gh release create "$TAG" ./* \
+              --title "FM27 Scout $TAG (unsigned)" \
+              --notes "$RELEASE_NOTES" \
+              --generate-notes \
+              --verify-tag
+          fi

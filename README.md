@@ -26,7 +26,7 @@ The 0.2.0 runnable release is complete:
 - Growth history: each parse records a snapshot keyed by save name + game date; the detail panel shows CA / PA / value history.
 - Gender and names: parses club gender (men's / women's) and bundles names for 208 countries/regions; competition names are supplied through a user CSV.
 - Linked filtering: club, nationality, gender and status counts update live with the current filters.
-- Release setup: hardened runtime, Developer ID signing, notarization, Universal Binary build scripts and CI.
+- Release setup: Universal Binary DMG + source ZIP published by CI; optional Developer ID signing/notarization for local releases.
 
 Real saves are not committed to the repository; specify one with an environment variable during development.
 
@@ -53,7 +53,7 @@ target/universal-apple-darwin/release/bundle/macos/FM27 Scout.app
 Local development builds can also produce a `target/release/bundle` for the current architecture only.
 
 Universal Binary / signing / notarization use `scripts/release-macos.sh`; see
-[docs/release.md](docs/release.md). CI builds and uploads a Universal DMG plus SHA-256 on `v*` tags.
+[docs/release.md](docs/release.md). CI publishes a GitHub Release with an unsigned Universal DMG, SHA-256 checksums, and a source ZIP on `v*` tags. The CI DMG is not notarized; on first launch, use **System Settings → Privacy & Security → Open Anyway**.
 
 ## Development environment
 
@@ -131,7 +131,7 @@ described in [docs/name-tables.md](docs/name-tables.md), and the release process
 - Injury data currently comes from the `injury_manager` history. If a save has no FM "expected return" typed rows, "injured" is empty while "injury history" still works.
 - Contract clauses, loans and contract chains are parsed; a few unobserved fallback structures are explicitly left blank.
 - Windows/Linux builds are not available yet.
-- Developer ID signing / notarization scripts and CI are configured; publishing requires your own Apple Developer certificate and notarization credentials.
+- CI publishes an unsigned DMG; on first launch, use **System Settings → Privacy & Security → Open Anyway**. Developer ID signing/notarization is optional, not used by CI, and requires a paid Apple Developer account.
 
 ## Roadmap
 

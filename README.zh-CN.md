@@ -26,7 +26,7 @@ macOS 上的 Football Manager 27 只读球探工具：Tauri 2 + Rust 解析核�
 - 成长曲线：每次解析按存档名 + 游戏日期写入快照，详情页显示 CA / PA / 身价历史。
 - 性别与名称：解析俱乐部性别（男子 / 女子），内置 208 个国家/地区中文名称表；赛事名称表支持用户 CSV。
 - 筛选联动：俱乐部、国籍、性别、状态计数随当前筛选实时更新。
-- 发布配置：hardened runtime、Developer ID 签名、notarization、Universal Binary 构建脚本与 CI。
+- 发布配置：CI 发布 Universal Binary DMG 与源码 ZIP；可选本地 Developer ID 签名/公证。
 
 真实存档未提交到仓库；开发时通过环境变量指定。
 
@@ -53,7 +53,7 @@ target/universal-apple-darwin/release/bundle/macos/FM27 Scout.app
 本地开发构建也可以只生成当前架构的 `target/release/bundle`。
 
 Universal Binary / 签名 / 公证使用 `scripts/release-macos.sh`，详见
-[docs/release.md](docs/release.md)。CI 在 `v*` tag 上构建并上传 Universal DMG 与 SHA-256。
+[docs/release.md](docs/release.md)。CI 在 `v*` tag 上发布 GitHub Release，包含未签名 Universal DMG、SHA-256 校验和和源码 ZIP。CI 构建未经公证，首次打开需前往「系统设置 → 隐私与安全性 → 仍要打开」。
 
 ## 开发环境
 
@@ -130,7 +130,7 @@ python3 -m venv .venv
 - 当前伤病数据来自 `injury_manager` 的伤病史；该存档没有 FM 的“预计复出”typed 行时，“伤病中”为空，但“伤病史”可用。
 - 合同条款、租借和合同链已解析；少数未观测的 fallback 结构会显式留空。
 - Windows/Linux 暂不构建。
-- Developer ID 签名 / notarization 已配置脚本与 CI；发布需要自备 Apple Developer 证书和公证凭据。
+- CI 发布的是未签名 DMG；首次打开需前往「系统设置 → 隐私与安全性 → 仍要打开」。Developer ID 签名/公证为可选项，CI 不使用，且需要付费 Apple Developer 账号。
 
 ## 后续
 

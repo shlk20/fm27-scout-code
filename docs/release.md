@@ -1,21 +1,48 @@
-# macOS 签名、Notarization 与 Universal Binary
+# macOS 发布（Universal DMG）
 
-FM27 Scout 使用 Tauri 2 的 macOS 打包链：`codesign`、hardened runtime、`notarytool`
-notarization 和 stapler 都由 Tauri 在检测到签名身份后执行。
+FM27 Scout 通过 GitHub Actions 发布**未签名、未公证**的 Universal DMG。
+这样不需要 Apple Developer Program 年费；代价是用户首次打开时需要手动绕过 Gatekeeper。
 
-## 前置条件
+## CI 发布
 
-- Apple Developer Program 账号。
-- `Developer ID Application` 证书（不要用 Apple Distribution，除非上架 App Store）。
-- App 专用密码（Apple ID 流程）或 App Store Connect API Key（API 流程）。
+`.github/workflows/release.yml` 不读取任何 Apple Secrets。
 
-本机查看可用签名身份：
+推送 `v*` tag 会构建并发布 GitHub Release。手动触发 workflow 时，可以在 `tag` 输入框填写
+一个已存在的 tag（例如 `v0.2.0`）来发布。留空时使用当前选择的 ref：从 tag 触发会发布
+Release，从分支触发则只构建并上传 CI artifact。
+
+发布前必须保证 tag 版本与 `apps/desktop/src-tauri/tauri.conf.json` 的 `version` 一致
+（例如 tag `v0.2.0` 对应 `0.2.0`），否则 workflow 会在构建前失败。
+
+Release 附件包括：
+
+- `FM27 Scout_<version>_universal.dmg`：未签名的 Universal DMG。
+- `fm27-scout-<version>-source.zip`：当前 tag 的源码归档。
+- `SHA256SUMS.txt`：上述文件的 SHA-256。
+- GitHub 自动附带的 `Source code (zip)` / `Source code (tar.gz)`。
+
+构建会运行 Rust/前端测试，检查双架构，并用 `hdiutil verify` 检查 DMG。
+
+## 首次打开未签名版本
+
+1. 打开 DMG，把 **FM27 Scout** 拖进「应用程序」。
+2. 先尝试打开一次 App。
+3. 打开「系统设置 → 隐私与安全性」，向下滚动，点击「仍要打开」。
+4. 确认打开。
+
+也可以在终端移除隔离标记：
 
 ```bash
-security find-identity -v -p codesigning
+xattr -dr com.apple.quarantine "/Applications/FM27 Scout.app"
+open "/Applications/FM27 Scout.app"
 ```
 
-## 本机构建
+未签名版本没有经过 Apple 公证，只应从本仓库的 Release 页面下载。
+
+## 可选：本地签名与公证
+
+需要付费 Apple Developer Program 账号。`scripts/release-macos.sh` 仍保留完整的签名、
+公证和验证流程：
 
 ```bash
 export APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)"
@@ -42,22 +69,9 @@ target/universal-apple-darwin/release/bundle/macos/FM27 Scout.app
 target/universal-apple-darwin/release/bundle/dmg/FM27 Scout_0.2.0_universal.dmg
 ```
 
-## CI
-
-`.github/workflows/release.yml` 从 GitHub Secrets 读取：
-
-| Secret | 用途 |
-|---|---|
-| `APPLE_CERTIFICATE` | 导出的 `.p12` 的 base64 |
-| `APPLE_CERTIFICATE_PASSWORD` | `.p12` 密码 |
-| `APPLE_SIGNING_IDENTITY` | 例如 `Developer ID Application: Name (TEAMID)` |
-| `APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID` | Apple ID 公证 |
-
-本机也可以使用 App Store Connect API Key（`APPLE_API_KEY`、`APPLE_API_ISSUER`、
-`APPLE_API_KEY_PATH`）；CI 默认走 Apple ID 流程。
-
-推送 `v*` tag 或手动触发 workflow。构建会运行 Rust/前端测试，签名，公证，验证双架构，
-上传 DMG 与校验和。
+如果以后要恢复 CI 签名发布，需要在 workflow 中重新加入 Apple Secrets：
+`APPLE_CERTIFICATE`、`APPLE_CERTIFICATE_PASSWORD`、`APPLE_SIGNING_IDENTITY`、
+`APPLE_ID`、`APPLE_PASSWORD`、`APPLE_TEAM_ID`。
 
 ## 配置
 
@@ -65,15 +79,18 @@ target/universal-apple-darwin/release/bundle/dmg/FM27 Scout_0.2.0_universal.dmg
   `minimumSystemVersion: 14.0`，entitlements 指向 `entitlements.plist`。
 - `apps/desktop/src-tauri/entitlements.plist`：WKWebView 在 hardened runtime 下需要的
   JIT 权限。
-- 不启用 App Sandbox；当前发布方式为 Developer ID + DMG。
+- 不启用 App Sandbox；当前发布方式为未签名 DMG。
+- 没有签名环境时，`pnpm tauri build --target universal-apple-darwin --bundles app,dmg`
+  会生成 ad-hoc 签名的可执行文件；它能在本机运行，但未通过 Gatekeeper。
 
 ## 本地验证
 
 ```bash
+hdiutil verify "target/universal-apple-darwin/release/bundle/dmg/FM27 Scout_0.2.0_universal.dmg"
 hdiutil attach "target/universal-apple-darwin/release/bundle/dmg/FM27 Scout_0.2.0_universal.dmg"
 cp -R "/Volumes/FM27 Scout/FM27 Scout.app" /tmp/
-codesign --verify --deep --strict /tmp/"FM27 Scout.app"
-spctl --assess --type execute -vv /tmp/"FM27 Scout.app"
+lipo -info /tmp/"FM27 Scout.app"/Contents/MacOS/*
 ```
 
-没有签名环境时仍可用 `pnpm tauri build --bundles app` 做本地调试构建；该构建不应发布。
+未签名构建在本地运行时，如果被 Gatekeeper 拦截，使用上面的「仍要打开」或
+`xattr -dr com.apple.quarantine`。
