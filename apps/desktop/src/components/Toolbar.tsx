@@ -69,7 +69,7 @@ export function Toolbar() {
   };
 
   return (
-    <header className="titlebar-drag flex h-11 shrink-0 items-center gap-2 border-b border-[var(--line)] bg-[var(--surface)]/95 px-3 pl-[86px] backdrop-blur">
+    <header className="titlebar-drag relative z-40 flex h-11 shrink-0 items-center gap-2 border-b border-[var(--line)] bg-[var(--surface)]/95 px-3 pl-[86px] backdrop-blur">
       <div className="no-drag flex items-center gap-2">
         <Button
           variant="ghost"
