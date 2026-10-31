@@ -172,14 +172,12 @@ export function Inspector() {
               {player.height_cm ? `${player.height_cm} cm` : "—"}
             </span>
             <span className="inline-flex items-center gap-1">
-              <CircleDot size={11} />
-              {t("common.foot", { left: player.left_foot, right: player.right_foot })}
-            </span>
-            <span className="inline-flex items-center gap-1">
               <CalendarDays size={11} />
               {t("inspector.contractUntil", { date: player.contract?.end ?? "—" })}
             </span>
           </div>
+
+          <FootCard left={player.left_foot} right={player.right_foot} />
 
           <div className="mt-3 grid grid-cols-3 gap-1.5">
             <MiniStat
@@ -328,6 +326,53 @@ function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string
         {label}
       </div>
       <div className="mt-0.5 truncate font-mono text-[11px] font-semibold text-[var(--ink)]">{value}</div>
+    </div>
+  );
+}
+
+function FootCard({ left, right }: { left: number; right: number }) {
+  const { t } = useI18n();
+  const difference = left - right;
+  const balanced = Math.abs(difference) <= 2;
+  const leftFooted = !balanced && left > right;
+  const summary = balanced
+    ? t("inspector.footBoth")
+    : leftFooted
+      ? t("inspector.footLeftFooted")
+      : t("inspector.footRightFooted");
+  return (
+    <div
+      className="mt-3 rounded-[7px] border border-[var(--line)] bg-[var(--surface-2)] px-2.5 py-2"
+      title={t("inspector.footHint")}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+          <CircleDot size={10} />
+          {t("inspector.foot")}
+        </span>
+        <span className="rounded-[4px] bg-[var(--accent-soft)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--accent-strong)]">
+          {summary}
+        </span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-[var(--muted)]">
+        {balanced ? (
+          <span>{t("inspector.footBalancedDetail", { left, right })}</span>
+        ) : (
+          <>
+            <span>{t("inspector.footPreferred")}</span>
+            <span className="font-semibold text-[var(--ink)]">
+              {leftFooted ? t("inspector.footLeft") : t("inspector.footRight")}{" "}
+              <span className="font-mono">{Math.max(left, right)}</span>
+            </span>
+            <span className="text-[var(--line-strong)]">·</span>
+            <span>{t("inspector.footWeak")}</span>
+            <span className="font-medium text-[var(--ink)]">
+              {leftFooted ? t("inspector.footRight") : t("inspector.footLeft")}{" "}
+              <span className="font-mono">{Math.min(left, right)}</span>
+            </span>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -862,10 +907,10 @@ function ContractPanel({ player }: { player: Player }) {
 }
 
 const POSITION_ROWS: (string | null)[][] = [
-  [null, "gk", null],
-  ["dl", "dc", "dr"],
-  ["wbl", "dm", "wbr"],
-  ["ml", "mc", "mr"],
-  ["aml", "amc", "amr"],
   [null, "stc", null],
+  ["aml", "amc", "amr"],
+  ["ml", "mc", "mr"],
+  ["wbl", "dm", "wbr"],
+  ["dl", "dc", "dr"],
+  [null, "gk", null],
 ];

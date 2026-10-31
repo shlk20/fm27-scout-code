@@ -19,12 +19,12 @@ import { MultiSelect } from "./MultiSelect";
 import { RangeInput } from "./RangeInput";
 
 const POSITION_ROWS: (string | null)[][] = [
-  [null, "gk", null],
-  ["dl", "dc", "dr"],
-  ["wbl", "dm", "wbr"],
-  ["ml", "mc", "mr"],
-  ["aml", "amc", "amr"],
   [null, "stc", null],
+  ["aml", "amc", "amr"],
+  ["ml", "mc", "mr"],
+  ["wbl", "dm", "wbr"],
+  ["dl", "dc", "dr"],
+  [null, "gk", null],
 ];
 
 const HIDDEN_ATTRIBUTES = new Set([

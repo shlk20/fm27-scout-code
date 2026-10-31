@@ -6,6 +6,18 @@ macOS 上的 Football Manager 27 只读球探工具：Tauri 2 + Rust 解析核�
 
 > 非官方工具，与 Sports Interactive / SEGA 无关。只读存档，不修改游戏，不联网，不上传任何数据。
 
+## 界面截图
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/main-dark.webp">
+  <img src="docs/screenshots/main-light.webp" alt="主界面：筛选、可排序球员列表与球员档案面板">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/analysis-dark.webp">
+  <img src="docs/screenshots/analysis-light.webp" alt="分析中心：年龄与 CA 分布、俱乐部实力与合同到期">
+</picture>
+
 ## 当前状态
 
 0.2.1 可运行版本已经完成：

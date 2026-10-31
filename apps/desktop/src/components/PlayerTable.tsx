@@ -270,11 +270,11 @@ export function PlayerTable() {
         id: "foot",
         accessorFn: (row) => row.left_foot,
         header: t("table.foot"),
-        size: 46,
+        size: 88,
         cell: ({ row }) => (
           <span className="font-mono text-[10px] text-[var(--muted)]">
             {row.original.left_foot != null && row.original.right_foot != null
-              ? `${row.original.left_foot}/${row.original.right_foot}`
+              ? `L: ${row.original.left_foot} / R: ${row.original.right_foot}`
               : "—"}
           </span>
         ),

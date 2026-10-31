@@ -6,6 +6,18 @@ A read-only Football Manager 27 scouting tool for macOS: Tauri 2 + Rust parsing 
 
 > Unofficial tool, not affiliated with Sports Interactive / SEGA. Saves are read-only; the game is never modified, and no data is sent over the network or uploaded anywhere.
 
+## Screenshots
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/main-dark.webp">
+  <img src="docs/screenshots/main-light.webp" alt="Main window with filters, sortable player table and player profile panel">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/analysis-dark.webp">
+  <img src="docs/screenshots/analysis-light.webp" alt="Analysis centre with age and CA distributions, club strength and contract expiry">
+</picture>
+
 ## Current status
 
 The 0.2.1 runnable release is complete:

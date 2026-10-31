@@ -469,8 +469,8 @@ export function genderLabel(gender: number | null | undefined, locale: Locale): 
   return locale === "en" ? "Unknown" : "未知";
 }
 
-export function footLabel(left: number, right: number, locale: Locale): string {
-  return locale === "en" ? `${left}/${right} foot` : `${left}/${right} 脚`;
+export function footLabel(left: number, right: number, _locale: Locale): string {
+  return `L: ${left} / R: ${right}`;
 }
 
 export function ageLabel(age: number | null | undefined, locale: Locale): string {
