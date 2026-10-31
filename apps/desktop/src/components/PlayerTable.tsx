@@ -80,7 +80,7 @@ export function PlayerTable() {
             className={cn(
               "flex h-4 w-4 items-center justify-center rounded-[4px] border text-[9px] font-bold transition-colors",
               compareUids.includes(row.original.uid)
-                ? "border-[var(--gold)] bg-[var(--gold)] text-[#221b0b]"
+                ? "border-[var(--gold)] bg-[var(--gold)] text-[var(--gold-contrast)]"
                 : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent hover:border-[var(--gold)]",
             )}
           >

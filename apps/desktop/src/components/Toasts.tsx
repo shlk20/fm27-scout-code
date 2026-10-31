@@ -15,9 +15,9 @@ export function Toasts() {
           className={cn(
             "toast-enter pointer-events-auto flex items-start gap-2.5 rounded-xl border bg-[var(--surface)] px-3 py-2.5 shadow-[var(--shadow-pop)]",
             toast.tone === "error"
-              ? "border-[var(--danger-soft)]"
+              ? "border-[var(--danger-line)]"
               : toast.tone === "success"
-                ? "border-[var(--accent-line)]"
+                ? "border-[var(--success-line)]"
                 : "border-[var(--line)]",
           )}
         >
@@ -27,7 +27,7 @@ export function Toasts() {
               toast.tone === "error"
                 ? "text-[var(--danger)]"
                 : toast.tone === "success"
-                  ? "text-[var(--accent)]"
+                  ? "text-[var(--success)]"
                   : "text-[var(--blue)]",
             )}
           >

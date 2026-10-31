@@ -21,15 +21,15 @@ export const Button = forwardRef<
 >(function Button({ className, variant = "secondary", size = "md", ...props }, ref) {
   const styles: Record<ButtonVariant, string> = {
     primary:
-      "bg-[var(--accent)] text-white border-[var(--accent)] hover:bg-[var(--accent-strong)] shadow-sm",
+      "bg-[var(--primary)] text-white border-[var(--primary)] hover:bg-[var(--primary-strong)] shadow-sm",
     secondary:
       "bg-[var(--surface)] text-[var(--ink)] border-[var(--line)] hover:bg-[var(--surface-2)] shadow-sm",
     ghost:
       "bg-transparent text-[var(--muted)] border-transparent hover:bg-[var(--surface-2)] hover:text-[var(--ink)]",
     danger:
-      "bg-[var(--danger-soft)] text-[var(--danger)] border-[var(--danger-soft)] hover:border-[var(--danger)]",
+      "bg-[var(--danger-soft)] text-[var(--danger)] border-[var(--danger-line)] hover:border-[var(--danger)]",
     gold:
-      "bg-[var(--gold-soft)] text-[var(--gold)] border-[var(--gold-line)] hover:bg-[var(--gold)] hover:text-[#221b0b]",
+      "bg-[var(--gold-soft)] text-[var(--gold)] border-[var(--gold-line)] hover:bg-[var(--gold)] hover:text-[var(--gold-contrast)]",
   };
   const sizes: Record<ButtonSize, string> = {
     sm: "h-7 px-2.5 text-[11px] gap-1.5",
@@ -214,7 +214,7 @@ export function Badge({
     accent: "border-[var(--accent-line)] bg-[var(--accent-soft)] text-[var(--accent-strong)]",
     gold: "border-[var(--gold-line)] bg-[var(--gold-soft)] text-[var(--gold)]",
     blue: "border-[var(--blue-line)] bg-[var(--blue-soft)] text-[var(--blue)]",
-    danger: "border-[var(--danger-soft)] bg-[var(--danger-soft)] text-[var(--danger)]",
+    danger: "border-[var(--danger-line)] bg-[var(--danger-soft)] text-[var(--danger)]",
     outline: "border-[var(--line)] bg-transparent text-[var(--muted)]",
   };
   return (

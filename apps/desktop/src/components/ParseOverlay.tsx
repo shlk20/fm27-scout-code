@@ -67,7 +67,7 @@ export function ParseOverlay() {
                 stage === activeStage
                   ? "border-[var(--accent)] bg-[var(--accent)] text-white"
                   : index < activeIndex
-                    ? "border-[var(--accent-line)] bg-[var(--accent-soft)] text-[var(--accent-strong)]"
+                    ? "border-[var(--success-line)] bg-[var(--success-soft)] text-[var(--success)]"
                     : "border-[var(--line)] text-[var(--muted)]"
               }`}
             >

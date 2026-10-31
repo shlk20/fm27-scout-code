@@ -211,7 +211,7 @@ export function Inspector() {
             </div>
           )}
           {player.injuries.some((injury) => injury.kind === "current") && (
-            <div className="mt-2 flex items-center gap-1.5 rounded-[7px] border border-[var(--danger-soft)] bg-[var(--danger-soft)]/60 px-2 py-1.5 text-[10px] text-[var(--danger)]">
+            <div className="mt-2 flex items-center gap-1.5 rounded-[7px] border border-[var(--danger-line)] bg-[var(--danger-soft)]/60 px-2 py-1.5 text-[10px] text-[var(--danger)]">
               <HeartPulse size={11} />
               <span className="font-semibold">{t("inspector.injured")}</span>
               <span className="ml-auto font-mono">
@@ -457,7 +457,7 @@ function HiddenPanel({
           </div>
         </div>
       )}
-      <div className="rounded-lg border border-[var(--danger-soft)] bg-[var(--danger-soft)]/50 p-2 text-[10px] leading-relaxed text-[var(--danger)]">
+      <div className="rounded-lg border border-[var(--danger-line)] bg-[var(--danger-soft)]/50 p-2 text-[10px] leading-relaxed text-[var(--danger)]">
         {t("inspector.hiddenWarning")}
       </div>
     </div>
@@ -565,7 +565,7 @@ function GrowthPanel({ points, gameDate }: { points: SnapshotPoint[]; gameDate: 
       <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2">
         <div className="mb-1 flex items-center justify-between px-1 text-[9px] text-[var(--muted)]">
           <span>{t("inspector.growthTitle")}</span>
-          <span className={caDelta >= 0 ? "text-[var(--accent-strong)]" : "text-[var(--danger)]"}>
+          <span className={caDelta >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}>
             CA {caDelta >= 0 ? "+" : ""}
             {caDelta}
           </span>
@@ -583,15 +583,15 @@ function GrowthPanel({ points, gameDate }: { points: SnapshotPoint[]; gameDate: 
             </g>
           ))}
           <path d={path("pa")} fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeDasharray="3 2" />
-          <path d={path("ca")} fill="none" stroke="var(--accent)" strokeWidth="2" />
+          <path d={path("ca")} fill="none" stroke="var(--success)" strokeWidth="2" />
           {points.map((point, index) =>
             point.ca == null ? null : (
-              <circle key={point.game_date} cx={x(index)} cy={y(point.ca)} r="2" fill="var(--accent)" />
+              <circle key={point.game_date} cx={x(index)} cy={y(point.ca)} r="2" fill="var(--success)" />
             ),
           )}
         </svg>
         <div className="flex items-center gap-3 px-1 text-[9px] text-[var(--muted)]">
-          <span className="inline-flex items-center gap-1"><span className="h-0.5 w-3 bg-[var(--accent)]" /> CA</span>
+          <span className="inline-flex items-center gap-1"><span className="h-0.5 w-3 bg-[var(--success)]" /> CA</span>
           <span className="inline-flex items-center gap-1"><span className="h-0.5 w-3 bg-[var(--gold)]" /> PA</span>
           <span className="ml-auto">{first.game_date} → {last.game_date}</span>
         </div>
@@ -606,7 +606,7 @@ function GrowthPanel({ points, gameDate }: { points: SnapshotPoint[]; gameDate: 
               </div>
             </div>
             <div className="flex items-center gap-3 font-mono">
-              <span className="text-[var(--accent-strong)]">CA {point.ca ?? "—"}</span>
+              <span className="text-[var(--success)]">CA {point.ca ?? "—"}</span>
               <span className="text-[var(--gold)]">PA {point.pa ?? "—"}</span>
               <span className="text-[var(--muted)]">{formatValue(point.transfer_value)}</span>
             </div>

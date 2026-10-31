@@ -33,14 +33,14 @@ export function initials(name: string | null | undefined): string {
 
 export function caTone(ca: number): string {
   if (ca >= 170) return "text-[var(--gold)] bg-[var(--gold-soft)] border-[var(--gold-line)]";
-  if (ca >= 140) return "text-[var(--accent)] bg-[var(--accent-soft)] border-[var(--accent-line)]";
+  if (ca >= 140) return "text-[var(--success)] bg-[var(--success-soft)] border-[var(--success-line)]";
   if (ca >= 110) return "text-[var(--blue)] bg-[var(--blue-soft)] border-[var(--blue-line)]";
   return "text-[var(--muted)] bg-[var(--surface-2)] border-[var(--line)]";
 }
 
 export function attributeTone(value: number): string {
-  if (value >= 16) return "bg-[var(--gold)] text-[#221b0b]";
-  if (value >= 13) return "bg-[var(--accent)] text-white";
+  if (value >= 16) return "bg-[var(--gold)] text-[var(--gold-contrast)]";
+  if (value >= 13) return "bg-[var(--success-emphasis)] text-white";
   if (value >= 10) return "bg-[var(--accent-soft)] text-[var(--accent-strong)]";
   if (value >= 7) return "bg-[var(--surface-3)] text-[var(--muted)]";
   return "bg-[var(--danger-soft)] text-[var(--danger)]";
