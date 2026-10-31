@@ -17,9 +17,10 @@ Release，从分支触发则只构建并上传 CI artifact。
 Release 附件包括：
 
 - `fm27-scout-<version>-universal.dmg`：未签名的 Universal DMG。
-- `fm27-scout-<version>-source.zip`：当前 tag 的源码归档。
-- `SHA256SUMS.txt`：上述文件的 SHA-256。
-- GitHub 自动附带的 `Source code (zip)` / `Source code (tar.gz)`。
+- `SHA256SUMS.txt`：DMG 的 SHA-256。
+
+GitHub 平台还会自动附带 `Source code (zip)` / `Source code (tar.gz)`；这是平台行为，
+workflow 不额外生成源码压缩包。
 
 构建会运行 Rust/前端测试，检查双架构，并用 `hdiutil verify` 检查 DMG。
 

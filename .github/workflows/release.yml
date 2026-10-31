@@ -102,15 +102,9 @@ jobs:
           test -n "$DMG"
           cp "$DMG" "release-assets/$DMG_NAME"
 
-          if [[ -n "$TAG" ]]; then
-            git archive --format=zip \
-              --prefix="fm27-scout-${VERSION}/" \
-              -o "release-assets/fm27-scout-${VERSION}-source.zip" HEAD
-          fi
-
           cd release-assets
           shopt -s nullglob
-          files=( *.dmg *.zip )
+          files=( *.dmg )
           shasum -a 256 "${files[@]}" > SHA256SUMS.txt
 
       - name: Upload release assets

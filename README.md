@@ -26,7 +26,7 @@ The 0.2.0 runnable release is complete:
 - Growth history: each parse records a snapshot keyed by save name + game date; the detail panel shows CA / PA / value history.
 - Gender and names: parses club gender (men's / women's) and bundles names for 208 countries/regions; competition names are supplied through a user CSV.
 - Linked filtering: club, nationality, gender and status counts update live with the current filters.
-- Release setup: Universal Binary DMG + source ZIP published by CI; optional Developer ID signing/notarization for local releases.
+- Release setup: Universal Binary DMG published by CI; optional Developer ID signing/notarization for local releases.
 
 Real saves are not committed to the repository; specify one with an environment variable during development.
 
@@ -53,7 +53,7 @@ target/universal-apple-darwin/release/bundle/macos/FM27 Scout.app
 Local development builds can also produce a `target/release/bundle` for the current architecture only.
 
 Universal Binary / signing / notarization use `scripts/release-macos.sh`; see
-[docs/release.md](docs/release.md). CI publishes a GitHub Release with an unsigned Universal DMG, SHA-256 checksums, and a source ZIP on `v*` tags. The CI DMG is not notarized; on first launch, use **System Settings → Privacy & Security → Open Anyway**.
+[docs/release.md](docs/release.md). CI publishes a GitHub Release with an unsigned Universal DMG and SHA-256 checksums on `v*` tags. The CI DMG is not notarized; on first launch, use **System Settings → Privacy & Security → Open Anyway**.
 
 ## Development environment
 
