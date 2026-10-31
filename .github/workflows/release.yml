@@ -90,10 +90,19 @@ jobs:
           TAG: ${{ steps.meta.outputs.release_tag }}
         run: |
           mkdir -p release-assets
-          cp target/universal-apple-darwin/release/bundle/dmg/*.dmg release-assets/
+
+          VERSION="${TAG#v}"
+          if [[ -n "$TAG" ]]; then
+            DMG_NAME="fm27-scout-${VERSION}-universal.dmg"
+          else
+            DMG_NAME="fm27-scout-universal.dmg"
+          fi
+
+          DMG="$(find target/universal-apple-darwin/release/bundle/dmg -maxdepth 1 -name '*.dmg' -print -quit)"
+          test -n "$DMG"
+          cp "$DMG" "release-assets/$DMG_NAME"
 
           if [[ -n "$TAG" ]]; then
-            VERSION="${TAG#v}"
             git archive --format=zip \
               --prefix="fm27-scout-${VERSION}/" \
               -o "release-assets/fm27-scout-${VERSION}-source.zip" HEAD

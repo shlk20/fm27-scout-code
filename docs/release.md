@@ -16,7 +16,7 @@ Release，从分支触发则只构建并上传 CI artifact。
 
 Release 附件包括：
 
-- `FM27 Scout_<version>_universal.dmg`：未签名的 Universal DMG。
+- `fm27-scout-<version>-universal.dmg`：未签名的 Universal DMG。
 - `fm27-scout-<version>-source.zip`：当前 tag 的源码归档。
 - `SHA256SUMS.txt`：上述文件的 SHA-256。
 - GitHub 自动附带的 `Source code (zip)` / `Source code (tar.gz)`。
