@@ -103,6 +103,10 @@ jobs:
         working-directory: apps/desktop
         run: pnpm install --frozen-lockfile
 
+      - name: Frontend build
+        working-directory: apps/desktop
+        run: pnpm build
+
       - name: Frontend tests
         working-directory: apps/desktop
         run: pnpm test
@@ -124,27 +128,10 @@ jobs:
           prefix-key: v1-ci-desktop
           cache-bin: false
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 12.3.4
-
-      - name: Install Node
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-          cache-dependency-path: apps/desktop/pnpm-lock.yaml
-
-      - name: Install frontend dependencies
-        working-directory: apps/desktop
-        run: pnpm install --frozen-lockfile
-
-      # Tauri needs the real frontend bundle for its build context, so this
-      # job validates the production frontend build too.
-      - name: Frontend build
-        working-directory: apps/desktop
-        run: pnpm build
+      # tauri-build only requires frontendDist to exist for cargo check. The
+      # real production bundle is built and tested in the Ubuntu frontend job.
+      - name: Prepare Tauri frontend context
+        run: mkdir -p apps/desktop/dist
 
       - name: Check desktop backend
         run: cargo check -p fm27-scout-desktop
