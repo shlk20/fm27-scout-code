@@ -1071,16 +1071,19 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building FM27 Scout")
-        .run(|app, event| {
-            if let tauri::RunEvent::Opened { urls } = event {
-                append_log(app, &format!("opened urls={urls:?}"));
+        .run(|_app, _event| {
+            // RunEvent::Opened is macOS/iOS-only. The desktop app targets macOS,
+            // but this keeps the crate checkable on other platforms in CI.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Opened { urls } = _event {
+                append_log(_app, &format!("opened urls={urls:?}"));
                 for url in urls {
                     if let Ok(path) = url.to_file_path() {
                         if let Ok(mut pending) = PENDING_OPEN.lock() {
                             *pending = Some(path.display().to_string());
-                            append_log(app, &format!("pending set -> {}", path.display()));
+                            append_log(_app, &format!("pending set -> {}", path.display()));
                         }
-                        let _ = app.emit("open://file", path.display().to_string());
+                        let _ = _app.emit("open://file", path.display().to_string());
                     }
                 }
             }
