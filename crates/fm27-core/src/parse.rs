@@ -20,8 +20,8 @@ use crate::layout::{
 };
 use crate::metadata::{SaveMetadata, read_metadata};
 use crate::model::{
-    Attributes, Club, Competition, FinanceMonth, ManagedClub, ParseReport, Player, Positions,
-    Reputation, SaveSummary, Stadium, Staff, TransferValueState,
+    Attributes, Club, Competition, Contract, FinanceMonth, ManagedClub, ParseReport, Player,
+    Positions, Reputation, SaveSummary, Stadium, Staff, TransferValueState,
 };
 use crate::names::NamePools;
 use crate::nations::NationIndex;
@@ -283,6 +283,7 @@ pub fn parse_save_with_progress(
             window_end,
         );
         let unique_id = closing.map(|(_, uid)| uid);
+        let identity_gender = closing.and_then(|(at, _)| gender_from_identity_block(&game_db, at));
         let person_end = closing.map_or(window_end, |(at, _)| at);
         let person = person_decoder.decode(&game_db, offset + 100, person_end);
         if person.is_some() {
@@ -407,6 +408,10 @@ pub fn parse_save_with_progress(
                 Vec::new(),
             ),
         };
+
+        let gender = identity_gender.or(gender).or_else(|| {
+            gender_from_club_references(&clubs, contract.as_ref(), &home_grown_club_uids)
+        });
 
         let reputation = Reputation {
             bucket: read_u8(&game_db, offset + PlayerLayout::REPUTATION_BUCKET_OFFSET).unwrap_or(0),
@@ -769,6 +774,73 @@ fn club_names(clubs: &[Club]) -> HashMap<u32, String> {
         .collect()
 }
 
+/// Read a player's gender from the flags byte in the identity block.
+///
+/// The identity block is the `pindex + 1, uid, uid` header found by
+/// [`closing_person_header`]. Its flags byte sits seven bytes before the header
+/// and carries the same woman flag as the identity block in FM27's live memory
+/// (`identity + 0x19`, bit `0x10`). On three local saves the bit is set for
+/// every player of a women's club and for no player of a men's club, including
+/// club-less players with no other gender reference.
+fn gender_from_identity_block(game_db: &[u8], header: usize) -> Option<u8> {
+    let at = header.checked_add_signed(PlayerLayout::IDENTITY_FLAGS_OFFSET_FROM_HEADER as isize)?;
+    let flags = read_u8(game_db, at)?;
+    Some(u8::from(flags & PlayerLayout::IDENTITY_WOMAN_FLAG != 0))
+}
+
+/// Resolve a gender from the club references that remain when no current club
+/// team owns the player.
+///
+/// FM27 stores men's and women's teams as separate club objects, so a contract
+/// club, a contract-chain club, a loan parent or a home-grown club identifies a
+/// person's gender the same way the current club does. References that disagree,
+/// or that carry no resolved gender, stay unknown instead of being guessed.
+fn gender_from_club_references(
+    clubs: &ClubIndex,
+    contract: Option<&Contract>,
+    home_grown_club_uids: &[Option<u32>],
+) -> Option<u8> {
+    let contract_uids = contract.into_iter().flat_map(|contract| {
+        std::iter::once(contract.club_uid)
+            .chain(contract.chain.iter().map(|entry| entry.club_uid))
+            .chain(std::iter::once(contract.loan_parent_club_uid))
+    });
+    let home_grown_uids = home_grown_club_uids.iter().copied();
+    unique_known_gender(
+        contract_uids
+            .chain(home_grown_uids)
+            .flatten()
+            .filter_map(|uid| club_gender(clubs, uid)),
+    )
+}
+
+fn club_gender(clubs: &ClubIndex, uid: u32) -> Option<u8> {
+    clubs
+        .club_by_uid
+        .get(&uid)
+        .and_then(|index| clubs.clubs.get(*index))
+        .and_then(|club| club.gender)
+        .filter(|gender| *gender <= 1)
+}
+
+/// Return the one gender every known value agrees on. `None` covers both "no
+/// known value" and "references disagree".
+fn unique_known_gender(genders: impl IntoIterator<Item = u8>) -> Option<u8> {
+    let mut seen = [false; 2];
+    for gender in genders {
+        match gender {
+            0 => seen[0] = true,
+            1 => seen[1] = true,
+            _ => {}
+        }
+    }
+    match seen {
+        [true, false] => Some(0),
+        [false, true] => Some(1),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -777,6 +849,29 @@ mod tests {
     fn parser_display_version_strips_the_cache_suffix() {
         assert!(!parser_display_version().contains('+'));
         assert!(parser_version().starts_with(parser_display_version()));
+    }
+
+    #[test]
+    fn club_reference_gender_needs_one_known_value() {
+        assert_eq!(unique_known_gender([0u8; 0]), None);
+        assert_eq!(unique_known_gender([0, 0]), Some(0));
+        assert_eq!(unique_known_gender([1, 1]), Some(1));
+        assert_eq!(unique_known_gender([0, 1]), None);
+        assert_eq!(unique_known_gender([2]), None);
+    }
+
+    #[test]
+    fn identity_block_gender_reads_the_woman_flag() {
+        let mut data = vec![0u8; 24];
+        data[9] = PlayerLayout::IDENTITY_WOMAN_FLAG;
+        assert_eq!(gender_from_identity_block(&data, 16), Some(1));
+
+        data[9] = 0x02;
+        assert_eq!(gender_from_identity_block(&data, 16), Some(0));
+
+        data[9] = 0;
+        assert_eq!(gender_from_identity_block(&data, 16), Some(0));
+        assert_eq!(gender_from_identity_block(&data, 6), None);
     }
 
     #[test]

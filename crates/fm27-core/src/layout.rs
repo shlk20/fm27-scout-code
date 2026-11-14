@@ -38,7 +38,7 @@ pub const PARSER_VERSION: &str = concat!(
     "+nation-names+listing+listing-flags+injury-windows+club-finance+stadiums",
     "+club-facilities+youth-level-edt+competition-names+club-leagues+season-stats+unique-ids",
     "+staff+second-nations+managed-club+build-2494687+build-2503222+squad-slots",
-    "+squad-fixtures"
+    "+squad-fixtures+club-history-gender+identity-gender"
 );
 pub const EARLIEST_YEAR: i32 = 1901;
 pub const LATEST_YEAR: i32 = 2200;
@@ -251,6 +251,12 @@ impl PlayerLayout {
     pub const HEIGHT_OFFSET: usize = 121;
     pub const DECODE_EXTENT: usize = 122;
     pub const ALLOCATED_UID_MINIMUM: u32 = 2_000_000_000;
+    /// Flags byte in the person's identity block, seven bytes before the
+    /// `pindex + 1, uid, uid` closing header. This is the save-file counterpart
+    /// of the live-memory identity block (`identity + 0x19`, per FMLibreEditor's
+    /// FM27 recon). Bit [`Self::IDENTITY_WOMAN_FLAG`] is set for women.
+    pub const IDENTITY_FLAGS_OFFSET_FROM_HEADER: i32 = -7;
+    pub const IDENTITY_WOMAN_FLAG: u8 = 0x10;
 }
 
 #[derive(Debug, Clone, Copy)]

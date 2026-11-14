@@ -53,7 +53,7 @@ import type {
   ValueFinderRequest,
   ValueFinderRow,
 } from "./types";
-import { STAFF_ATTRIBUTE_KEYS, STAFF_ROLE_KEYS, UNKNOWN_GENDER_ID } from "./types";
+import { STAFF_ATTRIBUTE_KEYS, STAFF_ROLE_KEYS } from "./types";
 
 export const MOCK_SAVE_ID = 1;
 
@@ -138,10 +138,6 @@ function rng(seed: number) {
     state = (state * 1664525 + 1013904223) >>> 0;
     return state / 0xffffffff;
   };
-}
-
-function genderBucket(gender: number | null): number {
-  return gender === 0 || gender === 1 ? gender : UNKNOWN_GENDER_ID;
 }
 
 function emptyPositions(): Positions {
@@ -338,10 +334,9 @@ function buildPlayer(index: number): Player {
 
 export const MOCK_PLAYERS: Player[] = Array.from({ length: 320 }, (_, index) => buildPlayer(index));
 
-// One free agent exercises the unknown-gender path: players inherit gender
-// from their club, so a player without a club has no resolved gender.
+// One free agent exercises the club-less player path.
 Object.assign(MOCK_PLAYERS[MOCK_PLAYERS.length - 1], {
-  gender: null,
+  gender: 0,
   club_uid: null,
   club_name: null,
   club_short_name: null,
@@ -519,12 +514,6 @@ export function mockFilterOptions(): FilterOptions {
     genders: [
       { id: 0, name: "男子", count: MOCK_PLAYERS.filter((player) => player.gender === 0).length },
       { id: 1, name: "女子", count: MOCK_PLAYERS.filter((player) => player.gender === 1).length },
-      {
-        id: UNKNOWN_GENDER_ID,
-        name: "未知",
-        count: MOCK_PLAYERS.filter((player) => genderBucket(player.gender) === UNKNOWN_GENDER_ID)
-          .length,
-      },
     ],
     availability: [
       { id: 1, name: "伤病", count: 0 },
@@ -583,7 +572,7 @@ export function mockQuery(query: PlayerQuery): {
   if (query.club_uids?.length) rows = rows.filter((row) => query.club_uids!.includes(row.club_uid ?? -1));
   if (query.nation_ids?.length) rows = rows.filter((row) => query.nation_ids!.includes(row.nation_id ?? -1));
   if (query.genders?.length)
-    rows = rows.filter((row) => query.genders!.includes(genderBucket(row.gender)));
+    rows = rows.filter((row) => query.genders!.includes(row.gender ?? -1));
   if (query.availability === "injured") rows = rows.filter((row) => row.injury_status === "injured");
   if (query.availability === "injury_history") rows = rows.filter((row) => row.recent_injury != null);
   if (query.availability === "suspended") rows = rows.filter((row) => row.suspension_count > 0);

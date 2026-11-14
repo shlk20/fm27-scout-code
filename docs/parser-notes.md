@@ -125,6 +125,12 @@ player record rejects valid headers. The closing header also bounds the person-b
 window; without it, a window that spans later people presents several valid person
 candidates and the player is left unnamed.
 
+The identity block carries a flags byte seven bytes before the header. Bit `0x10` is set
+for women; the other bits are not decoded. This is the save-file counterpart of the
+live-memory identity block's flag at `identity + 0x19` (FMLibreEditor's FM27 recon). On
+three local saves it is set for every player of a women's club, for no player of a men's
+club, and for club-less players as well.
+
 ## Person block
 
 The block is found by a zero byte followed by eight personality bytes in `1..=20`.
@@ -173,8 +179,15 @@ The database id is the key for `shared/nation-names.csv`; player and club nation
 save-local row indexes.
 
 A club's team list stores its gender byte immediately before the team count. `0` is men,
-`1` is women, and other values are kept raw. Players inherit their club gender; free agents
-stay unknown.
+`1` is women, and other values are kept raw. Men's and women's teams are separate club
+objects, so a club's gender also identifies the gender of the people contracted to it.
+
+A player's gender comes first from the identity block's flags byte (see above): bit `0x10`
+is set for women, and it exists for club-less players too. When a record has no closing
+header, the parser falls back to the owning club team, then to the remaining club
+references: the contract club, the contract chain, a loan parent and the home-grown clubs.
+The fallback is used only when every resolved reference agrees; players with no identity
+flag and no club reference stay unknown.
 
 ## Competitions
 

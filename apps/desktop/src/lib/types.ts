@@ -988,9 +988,6 @@ export interface ParseReport {
   warnings: string[];
 }
 
-/** Matches `store::UNKNOWN_GENDER_ID`; used for players without a club gender. */
-export const UNKNOWN_GENDER_ID = 255;
-
 export interface FilterOption {
   id: number;
   name: string;

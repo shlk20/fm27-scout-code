@@ -39,7 +39,11 @@ club join date      +98  game date
 match sharpness     +106 u16
 condition           +110 u16
 height cm           +121 u8
+identity flags      closing header -7  u8 (bit 0x10 = woman)
 ```
+
+The `pindex + 1, uid, uid` closing header follows the record. Its identity flags byte sits
+seven bytes before the header; bit `0x10` is set for women and clear for men.
 
 Display attributes: `max(1, (raw + 2) / 5)`.
 

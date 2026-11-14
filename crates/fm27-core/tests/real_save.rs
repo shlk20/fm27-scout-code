@@ -379,3 +379,76 @@ fn caches_queries_and_exports_the_reference_career() {
     let json = write_export(&dir.path().join("players.json"), "json", &rows).expect("json");
     assert_eq!(json.rows, 46_273);
 }
+
+#[test]
+#[ignore = "requires a real FM27 save and FM27_TEST_SAVE"]
+fn club_history_gender_agrees_with_known_club_gender() {
+    use std::collections::HashMap;
+
+    let path = std::env::var("FM27_TEST_SAVE").expect("set FM27_TEST_SAVE");
+    let parsed = parse_save(&path).expect("parse save");
+    let club_gender: HashMap<u32, u8> = parsed
+        .clubs
+        .iter()
+        .filter_map(|club| club.gender.map(|gender| (club.uid, gender)))
+        .collect();
+
+    let mut checked = 0usize;
+    let mut women = 0usize;
+    for player in &parsed.players {
+        let Some(gender) = player.gender else {
+            continue;
+        };
+        for uid in player.home_grown_club_uids.iter().flatten() {
+            let Some(reference) = club_gender.get(uid) else {
+                continue;
+            };
+            assert_eq!(
+                reference, &gender,
+                "player {:?} has a home-grown club with the other gender",
+                player.name
+            );
+            checked += 1;
+            if gender == 1 {
+                women += 1;
+            }
+        }
+    }
+    assert!(checked > 0, "home-grown club references are present");
+    assert!(
+        women > 0,
+        "women's players carry home-grown club references"
+    );
+}
+
+#[test]
+#[ignore = "requires a real FM27 save and FM27_TEST_SAVE"]
+fn identity_gender_matches_the_club_gender() {
+    use std::collections::HashMap;
+
+    let path = std::env::var("FM27_TEST_SAVE").expect("set FM27_TEST_SAVE");
+    let parsed = parse_save(&path).expect("parse save");
+    let club_gender: HashMap<u32, u8> = parsed
+        .clubs
+        .iter()
+        .filter_map(|club| club.gender.map(|gender| (club.uid, gender)))
+        .collect();
+
+    let mut checked = 0usize;
+    for player in &parsed.players {
+        let (Some(club_uid), Some(gender)) = (player.club_uid, player.gender) else {
+            continue;
+        };
+        let Some(reference) = club_gender.get(&club_uid) else {
+            continue;
+        };
+        assert_eq!(
+            Some(*reference),
+            Some(gender),
+            "player {:?} has an identity gender that disagrees with the club",
+            player.name
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "players with both genders are present");
+}

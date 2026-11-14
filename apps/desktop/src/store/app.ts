@@ -569,7 +569,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...view.filters,
         availability,
         attributes: visibleAttributes,
-        genders: view.filters.genders ?? [],
+        genders: (view.filters.genders ?? []).filter(
+          (gender) => gender === 0 || gender === 1,
+        ),
         listings: view.filters.listings ?? [],
         caMin: dataMode === "full" ? view.filters.caMin : null,
         caMax: dataMode === "full" ? view.filters.caMax : null,

@@ -10,7 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { useFilterOptions } from "@/lib/query";
-import { ATTRIBUTE_FILTER_GROUPS, POSITION_LABELS, UNKNOWN_GENDER_ID } from "@/lib/types";
+import { ATTRIBUTE_FILTER_GROUPS, POSITION_LABELS } from "@/lib/types";
 import { attributeLabel, nationLabel } from "@/lib/labels";
 import { useI18n } from "@/lib/useI18n";
 import { cn } from "@/lib/utils";
@@ -295,11 +295,6 @@ export function FilterSidebar() {
               { ids: [] as number[], label: t("filter.allGenders"), testId: "gender-all" },
               { ids: [0], label: t("filter.men"), testId: "gender-men" },
               { ids: [1], label: t("filter.women"), testId: "gender-women" },
-              {
-                ids: [UNKNOWN_GENDER_ID],
-                label: t("filter.unknownGender"),
-                testId: "gender-unknown",
-              },
             ].map((option) => {
               const active =
                 option.ids.length === 0
@@ -330,13 +325,6 @@ export function FilterSidebar() {
                 </button>
               );
             })}
-            <button
-              type="button"
-              onClick={() => patchFilters({ genders: [] })}
-              className="rounded-[6px] border border-dashed border-[var(--line)] px-2 py-1.5 text-[10px] text-[var(--muted)] hover:text-[var(--ink)]"
-            >
-              {t("filter.clearGender")}
-            </button>
           </div>
           <div className="grid grid-cols-2 gap-1">
             {[

@@ -88,11 +88,6 @@ const SCOUT_CANDIDATE_SELECT: &str = "SELECT p.uid, p.name, p.age, p.club_uid, p
      LEFT JOIN contracts c ON c.save_id = p.save_id AND c.player_uid = p.uid
      LEFT JOIN clubs cl ON cl.save_id = p.save_id AND cl.uid = p.club_uid";
 
-/// Reserved gender id for players whose gender cannot be resolved. Players
-/// inherit gender from their club's team list, so free agents are stored with
-/// `gender = NULL`; the filter UI groups those players under "unknown".
-pub const UNKNOWN_GENDER_ID: u8 = 255;
-
 struct ScoutRow {
     uid: u32,
     name: Option<String>,
@@ -3022,22 +3017,13 @@ impl Store {
 
         let mut gender_query = base.clone();
         gender_query.genders.clear();
-        let gender_group =
-            format!("CASE WHEN p.gender IN (0, 1) THEN p.gender ELSE {UNKNOWN_GENDER_ID} END");
-        let mut genders = self.facet_counts(
+        let genders = self.facet_counts(
             &gender_query,
-            &gender_group,
-            "CASE p.gender WHEN 0 THEN '男子' WHEN 1 THEN '女子' ELSE '未知' END",
-            None,
-            &gender_group,
+            "p.gender",
+            "CASE p.gender WHEN 0 THEN '男子' WHEN 1 THEN '女子' END",
+            Some("p.gender IN (0, 1)"),
+            "p.gender",
         )?;
-        for option in &mut genders {
-            option.name = match option.id {
-                0 => "男子".to_owned(),
-                1 => "女子".to_owned(),
-                _ => "未知".to_owned(),
-            };
-        }
 
         let mut status_query = base.clone();
         status_query.availability = None;
@@ -3836,25 +3822,18 @@ fn build_where(query: &PlayerQuery, params: &mut Vec<Value>) -> Result<String> {
             params.push(Value::Integer(*id as i64));
         }
     }
-    if !query.genders.is_empty() {
-        let mut gender_clauses = Vec::new();
-        let known: Vec<u8> = query
-            .genders
-            .iter()
-            .copied()
-            .filter(|gender| *gender != UNKNOWN_GENDER_ID)
-            .collect();
-        if !known.is_empty() {
-            let placeholders = vec!["?"; known.len()].join(",");
-            gender_clauses.push(format!("p.gender IN ({placeholders})"));
-            for gender in &known {
-                params.push(Value::Integer(*gender as i64));
-            }
+    let genders: Vec<u8> = query
+        .genders
+        .iter()
+        .copied()
+        .filter(|gender| *gender <= 1)
+        .collect();
+    if !genders.is_empty() {
+        let placeholders = vec!["?"; genders.len()].join(",");
+        clauses.push(format!("p.gender IN ({placeholders})"));
+        for gender in &genders {
+            params.push(Value::Integer(*gender as i64));
         }
-        if query.genders.contains(&UNKNOWN_GENDER_ID) {
-            gender_clauses.push("(p.gender IS NULL OR p.gender NOT IN (0, 1))".to_owned());
-        }
-        clauses.push(format!("({})", gender_clauses.join(" OR ")));
     }
     if let Some(availability) = query.availability.as_deref() {
         match availability {
@@ -4499,7 +4478,7 @@ mod tests {
     }
 
     #[test]
-    fn groups_and_filters_unknown_gender() {
+    fn gender_facets_cover_only_men_and_women() {
         let store = Store::open_in_memory().expect("store");
         store
             .conn
@@ -4520,6 +4499,7 @@ mod tests {
             .expect("seed");
 
         let options = store.filter_options(1).expect("filter options");
+        assert_eq!(options.genders.len(), 2);
         let count = |id: u32| {
             options
                 .genders
@@ -4529,33 +4509,24 @@ mod tests {
         };
         assert_eq!(count(0), Some(1));
         assert_eq!(count(1), Some(1));
-        assert_eq!(count(UNKNOWN_GENDER_ID as u32), Some(2));
 
-        let unknown = store
-            .query_players(&PlayerQuery {
-                save_id: 1,
-                genders: vec![UNKNOWN_GENDER_ID],
-                page_size: Some(10),
-                ..PlayerQuery::default()
-            })
-            .expect("unknown gender query");
-        assert_eq!(unknown.total, 2);
-        assert!(
-            unknown
-                .rows
-                .iter()
-                .all(|row| row.gender != Some(0) && row.gender != Some(1))
-        );
+        let query = |genders: Vec<u8>| {
+            store
+                .query_players(&PlayerQuery {
+                    save_id: 1,
+                    genders,
+                    page_size: Some(10),
+                    ..PlayerQuery::default()
+                })
+                .expect("gender query")
+        };
+        assert_eq!(query(vec![0]).total, 1);
+        assert_eq!(query(vec![1]).total, 1);
+        assert_eq!(query(vec![0, 1]).total, 2);
 
-        let mixed = store
-            .query_players(&PlayerQuery {
-                save_id: 1,
-                genders: vec![0, UNKNOWN_GENDER_ID],
-                page_size: Some(10),
-                ..PlayerQuery::default()
-            })
-            .expect("mixed gender query");
-        assert_eq!(mixed.total, 3);
+        // A stale saved view may still carry the removed unknown id; it is
+        // ignored instead of matching nothing.
+        assert_eq!(query(vec![255]).total, 4);
     }
 
     #[test]

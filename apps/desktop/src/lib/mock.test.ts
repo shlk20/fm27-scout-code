@@ -17,7 +17,6 @@ import {
   mockStatsMoneyball,
   mockValueFinder,
 } from "./mock";
-import { UNKNOWN_GENDER_ID } from "./types";
 
 describe("mock player query", () => {
   it("searches name and club", () => {
@@ -75,18 +74,11 @@ describe("mock player query", () => {
     expect(suspensions.rows.every((row) => row.suspension_count > 0)).toBe(true);
   });
 
-  it("counts players with unknown gender in the All option", () => {
+  it("offers only men and women in the gender facet", () => {
     const options = mockFilterOptions();
+    expect(options.genders.map((option) => option.id)).toEqual([0, 1]);
     const total = options.genders.reduce((sum, option) => sum + option.count, 0);
     expect(total).toBe(MOCK_PLAYERS.length);
-
-    const unknown = mockQuery({
-      save_id: MOCK_SAVE_ID,
-      genders: [UNKNOWN_GENDER_ID],
-      page_size: 500,
-    });
-    expect(unknown.total).toBe(1);
-    expect(unknown.rows.every((row) => row.gender == null)).toBe(true);
   });
 
   it("filters generated players", () => {

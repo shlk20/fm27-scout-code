@@ -86,6 +86,11 @@ competitions with differences: 0
 | Injury history rows | 783 |
 | Countries resolved from the nation table | 251 save-local ids |
 
+The unknown-gender count above predates the identity-block flag. The parser now reads the
+person's woman flag (bit `0x10`) from the identity block, so every player with a closing
+header resolves, free agents included. Club gender and club history remain the fallback for
+records without that header.
+
 ## Regression test
 
 ```bash
@@ -96,7 +101,10 @@ FM27_TEST_SAVE="/path/to/save.fm" \
 The ignored tests check the counts, Modrić's fields, nation names, gender split, role scores,
 suspensions, injury history, SQLite query/filter behavior, facet counts, multi-column sorting,
 growth snapshots, squad depth, wonderkid filtering, full 46,273-row export,
-CSV and JSON export.
+CSV and JSON export. `identity_gender_matches_the_club_gender` checks that the identity
+block's woman flag agrees with the club gender for every player who has both, and
+`club_history_gender_agrees_with_known_club_gender` checks that every home-grown club
+reference agrees with the player's club-derived gender.
 
 `labels_managed_squad_teams_from_the_fixture_calendar` additionally checks the
 fixture calendar join. On two verified local saves the managed club resolved as:
