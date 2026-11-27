@@ -1,6 +1,7 @@
 # Moneyball Sprint C：子位置、统计字段与时间窗口（2026-11-09）
 
 > 状态：模型升级为 `stats-core-v3` / `stats-advanced-v3`，价格模型为 `hedonic-ridge-v2`，Value Finder 为 `value-finder-v3`。
+> 后续变更：`value-finder-v4` 改为按性别分池计算百分位，并在性价比页和数据版加入性别筛选（见 `features.md`）。
 > 本阶段把中场拆成三个位置组、接入已解析但未使用的统计字段、增加统计窗口选择，并把年龄/合同/分钟负荷放进 `bargain_score`。
 
 ## 1. 子位置分组

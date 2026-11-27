@@ -703,6 +703,25 @@ pub fn apply_value_request(
         .filter(|row| matches_value_request(row, request, position_filter.as_deref()))
         .collect();
     let filtered = rows.len();
+    // League choices follow the scored gender pool, so a women's view does not
+    // offer men's leagues that can never produce a row.
+    let leagues = if request.genders.is_empty() {
+        baseline.leagues.clone()
+    } else {
+        let mut names = std::collections::BTreeSet::new();
+        for row in &baseline.rows {
+            if !row
+                .gender
+                .is_some_and(|gender| request.genders.contains(&gender))
+            {
+                continue;
+            }
+            if let Some(league) = row.league_name.as_deref() {
+                names.insert(league.to_owned());
+            }
+        }
+        names.into_iter().collect()
+    };
     let by = request.sort_by.as_deref().unwrap_or("score");
     let ascending = request
         .sort_dir
@@ -731,7 +750,7 @@ pub fn apply_value_request(
             scored: filtered,
             filtered,
             cost_horizon_years: COST_HORIZON_YEARS,
-            leagues: baseline.leagues.clone(),
+            leagues,
             mode: baseline.mode.clone(),
         },
     })
@@ -1019,11 +1038,14 @@ mod tests {
 
     #[test]
     fn gender_filter_keeps_only_the_requested_pool_and_ranks_inside_it() {
-        let man = candidate(1, 18, 160, 1_000_000, 20_000);
+        let mut man = candidate(1, 18, 160, 1_000_000, 20_000);
+        man.league_name = Some("Men League".to_owned());
         let mut strong_woman = candidate(2, 14, 120, 1_000_000, 20_000);
         strong_woman.gender = Some(1);
+        strong_woman.league_name = Some("Women League".to_owned());
         let mut weak_woman = candidate(3, 10, 100, 1_000_000, 20_000);
         weak_woman.gender = Some(1);
+        weak_woman.league_name = Some("Women League".to_owned());
         let mut unknown = candidate(4, 12, 110, 1_000_000, 20_000);
         unknown.gender = None;
         let all = vec![man, strong_woman, weak_woman, unknown];
@@ -1042,8 +1064,18 @@ mod tests {
         );
         // The best woman tops her own pool even though the man is stronger.
         assert_eq!(women.rows[0].role_pct, Some(1.0));
+        // The league list follows the selected pool.
+        assert_eq!(women.meta.leagues, vec!["Women League".to_owned()]);
 
         let everyone = score_value_finder(all, &request()).expect("all");
         assert_eq!(everyone.total, 4);
+        assert_eq!(
+            everyone.meta.leagues,
+            vec![
+                "League".to_owned(),
+                "Men League".to_owned(),
+                "Women League".to_owned(),
+            ]
+        );
     }
 }

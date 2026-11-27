@@ -1200,12 +1200,24 @@ export function mockValueFinder(request: ValueFinderRequest): ValueFinderPage {
     page_size: pageSize,
     rows,
     meta: {
-      model: "value-finder-v3-mock",
+      model: "value-finder-v4-mock",
       mode: request.mode ?? "full",
       scored: filtered.length,
       filtered: filtered.length,
       cost_horizon_years: 3,
-      leagues: Array.from(new Set(players.map((player) => player.league_name).filter((name): name is string => !!name))).sort(),
+      // Like the real model, league choices follow the scored gender pool.
+      leagues: Array.from(
+        new Set(
+          players
+            .filter(
+              (player) =>
+                !request.genders?.length ||
+                request.genders.includes(player.gender ?? -1),
+            )
+            .map((player) => player.league_name)
+            .filter((name): name is string => !!name),
+        ),
+      ).sort(),
     },
   };
 }

@@ -958,6 +958,7 @@ function StatsMoneyballPanel({
     setStatsWindow("overall");
     setPosition("");
     setLeague("");
+    setGender("");
     setMinMinutes(900);
     setContractBefore("");
     setMarket("all");

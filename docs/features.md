@@ -108,11 +108,12 @@
   stores, resolved through the bundled nation-name table.
 - Role scores: 29 FM-style roles weighted by key attributes and combined with
   position familiarity; the detail panel shows every role and the best role.
-- Value finder (experimental): role/CA quality against transfer value plus three
-  years of wages, with position-group percentiles, confidence, market/contract
+- Value finder (experimental, v4): role/CA quality against transfer value plus
+  three years of wages, with position-group percentiles computed separately for
+  men, women and players with no stored gender, plus confidence, market/contract
   flags and explainable score components. It is not a stats-based model; unknown
-  fees and wages are excluded by default. Contract-expiry, market, confidence and
-  injury-history filters are available.
+  fees and wages are excluded by default. Contract-expiry, market, confidence,
+  injury-history and gender (all / men / women) filters are available.
 - Stats moneyball (experimental, v3): npxG/xA, shooting, passing, defensive and
   possession percentiles in eight position groups (GK/DC/FB/DM/MC/WM/AMC/ST),
   with overall / league-only / last-12-months windows. Each row carries a quality
@@ -120,8 +121,8 @@
   an 80% confidence band, risk flags, per-metric drivers and same-group similar
   players. The core model scores every player; goalkeepers are ranked separately
   and the advanced model only scores rows with the advanced stat block. Contract,
-  market, confidence, injury and fee filters are available, and the current view
-  exports to CSV or JSON.
+  market, confidence, injury and fee filters are available, the gender filter
+  scores only the selected pool, and the current view exports to CSV or JSON.
 - Squad needs: the club inspector's squad tab ranks a club's weakest position
   groups by current stats quality and lists same-tier, fee-known upgrades with
   quality gain, fair price and value gap. It uses 300+ minute samples and excludes
