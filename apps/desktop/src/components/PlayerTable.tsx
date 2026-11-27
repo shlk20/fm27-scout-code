@@ -13,6 +13,7 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
   Columns3,
   EyeOff,
   Loader2,
@@ -24,6 +25,7 @@ import { type PlayerRow } from "@/lib/types";
 import { attributeLabel, nationLabel, roleName } from "@/lib/labels";
 import { formatNumber } from "@/lib/i18n";
 import { useI18n } from "@/lib/useI18n";
+import { useScrollTopOnPageChange } from "@/lib/useScrollTopOnPageChange";
 import { caLabelClass, cn, initials, paTone } from "@/lib/utils";
 import { useAppStore } from "@/store/app";
 import { Button, EmptyState } from "./ui";
@@ -76,6 +78,7 @@ export function PlayerTable() {
   const setPage = useAppStore((state) => state.setPage);
   const pageSize = useAppStore((state) => state.pageSize);
   const dataMode = useAppStore((state) => state.dataMode);
+  const tableScroll = useScrollTopOnPageChange(currentPage);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     height: false,
     foot: false,
@@ -543,7 +546,11 @@ export function PlayerTable() {
         </div>
       </div>
 
-      <div className="thin-scroll min-h-0 flex-1 overflow-auto">
+      <div
+        ref={tableScroll}
+        data-testid="player-table-scroll"
+        className="thin-scroll min-h-0 flex-1 overflow-auto"
+      >
         {page.isLoading ? (
           <TableSkeleton />
         ) : total === 0 ? (
@@ -663,6 +670,16 @@ export function PlayerTable() {
           <span>{t("table.serverPagination", { size: pageSize })}</span>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            disabled={currentPage <= 0}
+            onClick={() => setPage(0)}
+            aria-label={t("table.firstPage")}
+          >
+            <ChevronsLeft size={13} />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

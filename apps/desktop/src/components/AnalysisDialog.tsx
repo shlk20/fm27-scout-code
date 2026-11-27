@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
   Coins,
   Compass,
   Download,
@@ -40,6 +41,7 @@ import {
 } from "@/lib/labels";
 import { formatNumber, type TranslationKey } from "@/lib/i18n";
 import { useI18n } from "@/lib/useI18n";
+import { useScrollTopOnPageChange } from "@/lib/useScrollTopOnPageChange";
 import { caLabelClass, cn, initials, paTone } from "@/lib/utils";
 import { useAppStore } from "@/store/app";
 import { ScoutPanel } from "./ScoutPanel";
@@ -825,6 +827,7 @@ function StatsMoneyballPanel({
   const [injuryFilter, setInjuryFilter] = useState<"all" | "fit" | "noHistory">("all");
   const [includeUnknownFee, setIncludeUnknownFee] = useState(false);
   const [page, setPage] = useState(0);
+  const tableScroll = useScrollTopOnPageChange(page);
   const [sortBy, setSortBy] = useState("bargain");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [expandedUid, setExpandedUid] = useState<number | null>(null);
@@ -1352,7 +1355,11 @@ function StatsMoneyballPanel({
         <EmptyHint text={t("analysis.stats.empty")} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-[var(--line)]">
-          <div className="thin-scroll max-h-[430px] overflow-auto">
+          <div
+            ref={tableScroll}
+            data-testid="stats-moneyball-scroll"
+            className="thin-scroll max-h-[430px] overflow-auto"
+          >
             <table className="w-full min-w-[980px] text-left">
               <thead className="sticky top-0 z-10 bg-[var(--surface-2)] text-[9px] uppercase tracking-wider text-[var(--muted)]">
                 <tr>
@@ -1582,6 +1589,16 @@ function StatsMoneyballPanel({
               {t("analysis.value.page", { page: page + 1, pages })}
             </span>
             <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[10px]"
+                disabled={page <= 0}
+                onClick={() => setPage(0)}
+              >
+                <ChevronsLeft size={11} />
+                {t("analysis.value.first")}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -1832,6 +1849,7 @@ function ValueFinderPanel({
   const [injuryFilter, setInjuryFilter] = useState<"all" | "fit" | "noHistory">("all");
   const [includeUnknownFee, setIncludeUnknownFee] = useState(false);
   const [page, setPage] = useState(0);
+  const tableScroll = useScrollTopOnPageChange(page);
   const [sortBy, setSortBy] = useState("score");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -2124,7 +2142,11 @@ function ValueFinderPanel({
         <EmptyHint text={t("analysis.value.empty")} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-[var(--line)]">
-          <div className="thin-scroll max-h-[430px] overflow-auto">
+          <div
+            ref={tableScroll}
+            data-testid="value-finder-scroll"
+            className="thin-scroll max-h-[430px] overflow-auto"
+          >
             <table className="w-full min-w-[1040px] text-left">
               <thead className="sticky top-0 z-10 bg-[var(--surface-2)] text-[9px] uppercase tracking-wider text-[var(--muted)]">
                 <tr>
@@ -2313,6 +2335,16 @@ function ValueFinderPanel({
               {t("analysis.value.page", { page: page + 1, pages })}
             </span>
             <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[10px]"
+                disabled={page <= 0}
+                onClick={() => setPage(0)}
+              >
+                <ChevronsLeft size={11} />
+                {t("analysis.value.first")}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

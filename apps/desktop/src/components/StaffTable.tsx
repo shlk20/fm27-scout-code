@@ -13,6 +13,7 @@ import {
   BriefcaseBusiness,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
   Columns3,
   EyeOff,
   Loader2,
@@ -33,6 +34,7 @@ import {
 } from "@/lib/labels";
 import { formatNumber } from "@/lib/i18n";
 import { useI18n } from "@/lib/useI18n";
+import { useScrollTopOnPageChange } from "@/lib/useScrollTopOnPageChange";
 import { caLabelClass, cn, initials } from "@/lib/utils";
 import { useAppStore } from "@/store/app";
 import { Button, EmptyState } from "./ui";
@@ -55,6 +57,7 @@ export function StaffTable() {
   const currentPage = useAppStore((state) => state.staffPage);
   const setPage = useAppStore((state) => state.setStaffPage);
   const pageSize = useAppStore((state) => state.staffPageSize);
+  const tableScroll = useScrollTopOnPageChange(currentPage);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(OVERVIEW_VISIBILITY);
   const [columnsOpen, setColumnsOpen] = useState(false);
 
@@ -382,7 +385,11 @@ export function StaffTable() {
         </div>
       </div>
 
-      <div className="thin-scroll min-h-0 flex-1 overflow-auto">
+      <div
+        ref={tableScroll}
+        data-testid="staff-table-scroll"
+        className="thin-scroll min-h-0 flex-1 overflow-auto"
+      >
         {page.isLoading ? (
           <TableSkeleton />
         ) : total === 0 ? (
@@ -494,6 +501,16 @@ export function StaffTable() {
           <span>{t("table.serverPagination", { size: pageSize })}</span>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            disabled={currentPage <= 0}
+            onClick={() => setPage(0)}
+            aria-label={t("table.firstPage")}
+          >
+            <ChevronsLeft size={13} />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

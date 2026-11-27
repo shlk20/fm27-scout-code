@@ -4,6 +4,7 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
   Loader2,
   SearchX,
   Shield,
@@ -12,6 +13,7 @@ import { useClubPage } from "@/lib/query";
 import { facilityRatingLabel, nationLabel } from "@/lib/labels";
 import { formatNumber } from "@/lib/i18n";
 import { useI18n } from "@/lib/useI18n";
+import { useScrollTopOnPageChange } from "@/lib/useScrollTopOnPageChange";
 import { caLabelClass, cn, initials } from "@/lib/utils";
 import { useAppStore } from "@/store/app";
 import { Button, EmptyState } from "./ui";
@@ -25,6 +27,7 @@ export function ClubTable() {
   const setSort = useAppStore((state) => state.setClubSort);
   const currentPage = useAppStore((state) => state.clubPage);
   const setPage = useAppStore((state) => state.setClubPage);
+  const tableScroll = useScrollTopOnPageChange(currentPage);
   const rows = page.data?.rows ?? [];
   const total = page.data?.total ?? 0;
   const pageSize = page.data?.page_size ?? 100;
@@ -80,7 +83,11 @@ export function ClubTable() {
         </div>
       </div>
 
-      <div className="thin-scroll min-h-0 min-w-0 flex-1 overflow-auto">
+      <div
+        ref={tableScroll}
+        data-testid="club-table-scroll"
+        className="thin-scroll min-h-0 min-w-0 flex-1 overflow-auto"
+      >
         {page.isLoading ? (
           <ClubTableSkeleton />
         ) : total === 0 ? (
@@ -239,6 +246,16 @@ export function ClubTable() {
           <span>{t("clubs.table.page", { page: currentPage + 1, pages })}</span>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            disabled={currentPage <= 0}
+            onClick={() => setPage(0)}
+            aria-label={t("clubs.table.first")}
+          >
+            <ChevronsLeft size={13} />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
