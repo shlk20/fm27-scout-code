@@ -772,6 +772,7 @@ type StatsView = {
   window?: "overall" | "league" | "calendar";
   position: string;
   league: string;
+  gender?: "" | "0" | "1";
   minCa: number;
   maxAge: number;
   minMinutes: number;
@@ -816,6 +817,7 @@ function StatsMoneyballPanel({
   const [statsWindow, setStatsWindow] = useState<"overall" | "league" | "calendar">("overall");
   const [position, setPosition] = useState("");
   const [league, setLeague] = useState("");
+  const [gender, setGender] = useState<"" | "0" | "1">("");
   const [minCa, setMinCa] = useState(120);
   const [maxAge, setMaxAge] = useState(30);
   const [minMinutes, setMinMinutes] = useState(900);
@@ -844,6 +846,7 @@ function StatsMoneyballPanel({
     statsWindow,
     position,
     league,
+    gender,
     minCa,
     maxAge,
     minMinutes,
@@ -870,6 +873,7 @@ function StatsMoneyballPanel({
             include_goalkeepers: position === "GK",
             position_group: position || null,
             league: league || null,
+            genders: gender === "" ? [] : [Number(gender)],
             ca_min: dataMode === "full" ? minCa : null,
             age_max: maxAge,
             min_minutes: minMinutes,
@@ -893,6 +897,7 @@ function StatsMoneyballPanel({
       dataMode,
       position,
       league,
+      gender,
       minCa,
       maxAge,
       minMinutes,
@@ -932,6 +937,7 @@ function StatsMoneyballPanel({
     setStatsWindow("overall");
     setPosition("");
     setLeague("");
+    setGender("");
     setMinCa(120);
     setMaxAge(30);
     setMinMinutes(900);
@@ -1012,6 +1018,7 @@ function StatsMoneyballPanel({
       window: statsWindow,
       position,
       league,
+      gender,
       minCa,
       maxAge,
       minMinutes,
@@ -1035,6 +1042,7 @@ function StatsMoneyballPanel({
     setStatsWindow(view.window ?? "overall");
     setPosition(view.position);
     setLeague(view.league);
+    setGender(view.gender ?? "");
     setMinCa(view.minCa);
     setMaxAge(view.maxAge);
     setMinMinutes(view.minMinutes);
@@ -1103,6 +1111,17 @@ function StatsMoneyballPanel({
                   {name}
                 </option>
               ))}
+            </Select>
+          </ValueFilter>
+          <ValueFilter label={t("analysis.value.gender")} className="w-[96px]">
+            <Select
+              value={gender}
+              onChange={(event) => setGender(event.target.value as "" | "0" | "1")}
+              className="h-7 text-[10px]"
+            >
+              <option value="">{t("filter.allGenders")}</option>
+              <option value="0">{t("filter.men")}</option>
+              <option value="1">{t("filter.women")}</option>
             </Select>
           </ValueFilter>
           {dataMode === "full" && (
@@ -1840,6 +1859,7 @@ function ValueFinderPanel({
   const [league, setLeague] = useState("");
   const [minCa, setMinCa] = useState(120);
   const [minRole, setMinRole] = useState(12);
+  const [gender, setGender] = useState<"" | "0" | "1">("");
   const [maxAge, setMaxAge] = useState(30);
   const [maxFee, setMaxFee] = useState<number | null>(null);
   const [maxWage, setMaxWage] = useState<number | null>(null);
@@ -1859,6 +1879,7 @@ function ValueFinderPanel({
     saveId,
     position,
     league,
+    gender,
     minCa,
     minRole,
     maxAge,
@@ -1882,6 +1903,7 @@ function ValueFinderPanel({
             mode: dataMode,
             position_group: position || null,
             league: league || null,
+            genders: gender === "" ? [] : [Number(gender)],
             age_max: maxAge,
             ca_min: dataMode === "full" ? minCa : null,
             role_min: minRole,
@@ -1903,6 +1925,7 @@ function ValueFinderPanel({
       dataMode,
       position,
       league,
+      gender,
       minCa,
       minRole,
       maxAge,
@@ -1936,6 +1959,7 @@ function ValueFinderPanel({
   const reset = () => {
     setPosition("");
     setLeague("");
+    setGender("");
     setMinCa(120);
     setMinRole(12);
     setMaxAge(30);
@@ -1992,6 +2016,17 @@ function ValueFinderPanel({
                   {name}
                 </option>
               ))}
+            </Select>
+          </ValueFilter>
+          <ValueFilter label={t("analysis.value.gender")} className="w-[96px]">
+            <Select
+              value={gender}
+              onChange={(event) => setGender(event.target.value as "" | "0" | "1")}
+              className="h-7 text-[10px]"
+            >
+              <option value="">{t("filter.allGenders")}</option>
+              <option value="0">{t("filter.men")}</option>
+              <option value="1">{t("filter.women")}</option>
             </Select>
           </ValueFilter>
           {dataMode === "full" && (

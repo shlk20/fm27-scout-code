@@ -538,6 +538,8 @@ export interface ValueFinderRequest {
   mode?: "full" | "fair_play" | "moneyball" | null;
   position_group?: string | null;
   league?: string | null;
+  /** 0 men, 1 women. Empty keeps everyone. */
+  genders?: number[];
   age_min?: number | null;
   age_max?: number | null;
   ca_min?: number | null;
@@ -565,6 +567,7 @@ export interface ValueFinderRow {
   club_name: string | null;
   league_name: string | null;
   nation_name: string | null;
+  gender: number | null;
   ca: number;
   pa: number | null;
   role_id: string | null;
@@ -622,6 +625,8 @@ export interface StatsMoneyballRequest {
   include_goalkeepers?: boolean;
   position_group?: string | null;
   league?: string | null;
+  /** 0 men, 1 women. Empty keeps everyone. */
+  genders?: number[];
   age_min?: number | null;
   age_max?: number | null;
   ca_min?: number | null;

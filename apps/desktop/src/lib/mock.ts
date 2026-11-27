@@ -1111,6 +1111,7 @@ export function mockValueFinder(request: ValueFinderRequest): ValueFinderPage {
       );
       if (request.position_group && !mockPositionFilterMatches(request.position_group, group)) return false;
       if (request.league && player.league_name !== request.league) return false;
+      if (request.genders?.length && !request.genders.includes(player.gender ?? -1)) return false;
       if (request.age_min != null && (player.age ?? 0) < request.age_min) return false;
       if (request.age_max != null && (player.age ?? 999) > request.age_max) return false;
       if (request.ca_min != null && player.ca < request.ca_min) return false;
@@ -1161,6 +1162,7 @@ export function mockValueFinder(request: ValueFinderRequest): ValueFinderPage {
     club_name: player.club_name,
     league_name: player.league_name,
     nation_name: player.nation_name,
+    gender: player.gender,
     ca: player.ca,
     pa: player.pa,
     role_id: player.best_role_id,
@@ -1308,7 +1310,10 @@ export function mockSimilarStatsPlayers(
 }
 
 export function mockStatsMoneyball(request: StatsMoneyballRequest): StatsMoneyballPage {
-  const players = MOCK_PLAYERS.map(mockPlayerRow);
+  // Like the real model, a gender filter scores only that pool.
+  const players = MOCK_PLAYERS.map(mockPlayerRow).filter(
+    (player) => !request.genders?.length || request.genders.includes(player.gender ?? -1),
+  );
   const model = request.model ?? "core";
   const minMinutes = request.min_minutes ?? 900;
   const rows: StatsMoneyballRow[] = players.map((player, index) => {

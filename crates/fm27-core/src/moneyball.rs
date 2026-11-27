@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 
-pub const VALUE_FINDER_MODEL: &str = "value-finder-v3";
+pub const VALUE_FINDER_MODEL: &str = "value-finder-v4";
 const COST_HORIZON_YEARS: f64 = 3.0;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -24,6 +24,8 @@ pub struct ValueFinderRequest {
     pub mode: Option<String>,
     pub position_group: Option<String>,
     pub league: Option<String>,
+    /// Player genders to keep (`0` men, `1` women). Empty keeps everyone.
+    pub genders: Vec<u8>,
     pub age_min: Option<i32>,
     pub age_max: Option<i32>,
     pub ca_min: Option<u16>,
@@ -53,6 +55,7 @@ pub struct ValueFinderRow {
     pub club_name: Option<String>,
     pub league_name: Option<String>,
     pub nation_name: Option<String>,
+    pub gender: Option<u8>,
     pub ca: u16,
     pub pa: Option<i16>,
     pub role_id: Option<String>,
@@ -114,6 +117,7 @@ pub struct ValueFinderCandidate {
     pub club_name: Option<String>,
     pub league_name: Option<String>,
     pub nation_name: Option<String>,
+    pub gender: Option<u8>,
     pub ca: u16,
     pub pa: Option<i16>,
     pub role_id: Option<String>,
@@ -454,11 +458,24 @@ pub fn score_value_baseline(
     let mut role_pct = vec![None; candidates.len()];
     let mut ca_pct = vec![None; candidates.len()];
     let mut cost_pct = vec![None; candidates.len()];
-    for group in POSITION_GROUPS.into_iter().chain(["OTHER"]) {
+    // Men and women are separate player pools in FM, so each gender gets its
+    // own percentile groups.
+    let genders: std::collections::BTreeSet<Option<u8>> = candidates
+        .iter()
+        .map(|candidate| candidate.gender)
+        .collect();
+    for (gender, group) in genders.iter().flat_map(|gender| {
+        POSITION_GROUPS
+            .into_iter()
+            .chain(["OTHER"])
+            .map(move |group| (*gender, group))
+    }) {
         let indices: Vec<usize> = groups
             .iter()
             .enumerate()
-            .filter_map(|(index, value)| (*value == group).then_some(index))
+            .filter_map(|(index, value)| {
+                (*value == group && candidates[index].gender == gender).then_some(index)
+            })
             .collect();
         if indices.is_empty() {
             continue;
@@ -528,6 +545,7 @@ pub fn score_value_baseline(
             club_name: candidate.club_name,
             league_name: candidate.league_name,
             nation_name: candidate.nation_name,
+            gender: candidate.gender,
             ca: candidate.ca,
             pa: candidate.pa,
             role_id: candidate.role_id,
@@ -583,6 +601,13 @@ fn matches_value_request(
     }
     if let Some(league) = request.league.as_deref()
         && row.league_name.as_deref() != Some(league)
+    {
+        return false;
+    }
+    if !request.genders.is_empty()
+        && row
+            .gender
+            .is_none_or(|gender| !request.genders.contains(&gender))
     {
         return false;
     }
@@ -737,6 +762,7 @@ mod tests {
             club_name: Some("Club".to_owned()),
             league_name: Some("League".to_owned()),
             nation_name: Some("Nation".to_owned()),
+            gender: Some(0),
             ca,
             pa: Some(ca as i16 + 10),
             role_id: Some("central_midfielder".to_owned()),
@@ -989,5 +1015,35 @@ mod tests {
         assert!(full_high.quality_pct > full_low.quality_pct);
         assert!((fair_high.quality_pct - fair_low.quality_pct).abs() < 1e-9);
         assert_eq!(fair.meta.mode, "fair_play");
+    }
+
+    #[test]
+    fn gender_filter_keeps_only_the_requested_pool_and_ranks_inside_it() {
+        let man = candidate(1, 18, 160, 1_000_000, 20_000);
+        let mut strong_woman = candidate(2, 14, 120, 1_000_000, 20_000);
+        strong_woman.gender = Some(1);
+        let mut weak_woman = candidate(3, 10, 100, 1_000_000, 20_000);
+        weak_woman.gender = Some(1);
+        let mut unknown = candidate(4, 12, 110, 1_000_000, 20_000);
+        unknown.gender = None;
+        let all = vec![man, strong_woman, weak_woman, unknown];
+
+        let women = score_value_finder(
+            all.clone(),
+            &ValueFinderRequest {
+                genders: vec![1],
+                ..request()
+            },
+        )
+        .expect("women");
+        assert_eq!(
+            women.rows.iter().map(|row| row.uid).collect::<Vec<_>>(),
+            vec![2, 3]
+        );
+        // The best woman tops her own pool even though the man is stronger.
+        assert_eq!(women.rows[0].role_pct, Some(1.0));
+
+        let everyone = score_value_finder(all, &request()).expect("all");
+        assert_eq!(everyone.total, 4);
     }
 }

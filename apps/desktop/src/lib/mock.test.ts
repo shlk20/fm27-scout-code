@@ -18,6 +18,29 @@ import {
   mockValueFinder,
 } from "./mock";
 
+describe("mock value finder gender filter", () => {
+  it("keeps only the requested gender", () => {
+    const base = { save_id: MOCK_SAVE_ID, include_unknown_fee: true, page_size: 500 };
+    const all = mockValueFinder(base);
+    const women = mockValueFinder({ ...base, genders: [1] });
+    const men = mockValueFinder({ ...base, genders: [0] });
+    expect(women.total).toBeGreaterThan(0);
+    expect(men.total).toBeGreaterThan(0);
+    expect(women.rows.every((row) => row.gender === 1)).toBe(true);
+    expect(men.rows.every((row) => row.gender === 0)).toBe(true);
+    expect(women.total + men.total).toBe(all.total);
+  });
+
+  it("filters stats moneyball by gender", () => {
+    const base = { save_id: MOCK_SAVE_ID, include_unknown_fee: true, page_size: 500 };
+    const all = mockStatsMoneyball(base);
+    const women = mockStatsMoneyball({ ...base, genders: [1] });
+    const men = mockStatsMoneyball({ ...base, genders: [0] });
+    expect(women.total).toBeGreaterThan(0);
+    expect(women.total + men.total).toBe(all.total);
+  });
+});
+
 describe("mock player query", () => {
   it("searches name and club", () => {
     const page = mockQuery({

@@ -261,6 +261,8 @@ struct StatsCacheKey {
     window: String,
     /// full, fair_play or moneyball. Each mode prices players differently.
     mode: String,
+    /// Sorted, deduplicated gender pool. Empty means every player.
+    genders: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -1492,6 +1494,7 @@ impl Store {
             model: model.to_owned(),
             window: "overall".to_owned(),
             mode: "full".to_owned(),
+            genders: Vec::new(),
         };
         Ok(self.read_player_metrics(&key)?.unwrap_or_default())
     }
@@ -2126,11 +2129,21 @@ impl Store {
         let model = crate::stats_moneyball::normalized_model(request.model.as_deref())?;
         let window = crate::stats_moneyball::normalized_window(request.window.as_deref())?;
         let mode = crate::stats_moneyball::normalized_mode(request.mode.as_deref())?;
+        let mut genders = request.genders.clone();
+        genders.sort_unstable();
+        genders.dedup();
+        // Only the all-genders overall/full ranking is materialized.
+        let materialized = window == "overall" && mode == "full" && genders.is_empty();
+        let gender_list = genders
+            .iter()
+            .map(|gender| format!(",{gender},"))
+            .collect::<String>();
         let cache_key = StatsCacheKey {
             save_id: request.save_id,
             model: crate::stats_moneyball::model_name(model).to_owned(),
             window: window.to_owned(),
             mode: mode.to_owned(),
+            genders,
         };
         if let Ok(cache) = self.stats_cache.lock()
             && let Some(rows) = cache.get(&cache_key)
@@ -2139,8 +2152,7 @@ impl Store {
         }
         // Only the overall window is materialized; the other windows are cheap
         // enough to recompute once per session.
-        if window == "overall"
-            && mode == "full"
+        if materialized
             && let Some(rows) = self.read_player_metrics(&cache_key)?
             // Rows materialized before the percentile vectors existed are
             // re-scored once so the similarity search has axes to compare.
@@ -2174,13 +2186,15 @@ impl Store {
              JOIN players p ON p.save_id = s.save_id AND p.uid = s.player_uid
              LEFT JOIN contracts c ON c.save_id = p.save_id AND c.player_uid = p.uid
              LEFT JOIN clubs cl ON cl.save_id = p.save_id AND cl.uid = p.club_uid
-             WHERE s.save_id = ?1 AND s.kind = ?3 AND s.minutes >= ?2",
+             WHERE s.save_id = ?1 AND s.kind = ?3 AND s.minutes >= ?2
+               AND (?4 = '' OR instr(?4, ',' || p.gender || ',') > 0)",
         )?;
         let rows = statement.query_map(
             params![
                 request.save_id,
                 crate::stats_moneyball::SCORE_FLOOR_MINUTES,
-                window
+                window,
+                gender_list
             ],
             |row| {
                 let transfer_value_state = row
@@ -2296,7 +2310,7 @@ impl Store {
             model,
             mode,
         )?;
-        if window == "overall" && mode == "full" {
+        if materialized {
             self.write_player_metrics(&cache_key, &scored)?;
         }
         let rows = Arc::new(scored);
@@ -2497,7 +2511,7 @@ impl Store {
                     p.best_role_score, p.best_role_position, p.transfer_value,
                     p.transfer_value_state, c.wage, c.end_date, cl.reputation,
                     p.transfer_listed, p.loan_listed, p.injury_status, p.recent_injury,
-                    p.positions_text
+                    p.positions_text, p.gender
              FROM players p
              LEFT JOIN contracts c ON c.save_id = p.save_id AND c.player_uid = p.uid
              LEFT JOIN clubs cl ON cl.save_id = p.save_id AND cl.uid = p.club_uid
@@ -2524,6 +2538,7 @@ impl Store {
                 club_name: row.get(4)?,
                 league_name: row.get(5)?,
                 nation_name: row.get(6)?,
+                gender: row.get(23)?,
                 ca: row.get(7)?,
                 pa: row.get(8)?,
                 role_id: row.get(9)?,
@@ -5226,6 +5241,7 @@ mod tests {
                     model: "core".to_owned(),
                     window: "overall".to_owned(),
                     mode: "full".to_owned(),
+                    genders: Vec::new(),
                 },
                 Arc::new(Vec::new()),
             );
@@ -5241,6 +5257,7 @@ mod tests {
                 model: "core".to_owned(),
                 window: "overall".to_owned(),
                 mode: "full".to_owned(),
+                genders: Vec::new(),
             },
             Arc::new(Vec::new()),
         );
@@ -5822,6 +5839,42 @@ mod tests {
         assert!((stored.non_penalty_expected_goals - 18.0).abs() < 1e-9);
         assert_eq!(stored.peer_count, 3);
         assert!(!stored.metric_percentiles.is_empty());
+
+        // A gender filter scores only that pool and never touches the
+        // materialized all-genders ranking.
+        store
+            .conn
+            .execute_batch(
+                "UPDATE players SET gender = 0 WHERE save_id = 1;
+                 UPDATE players SET gender = 1 WHERE save_id = 1 AND uid = 3;",
+            )
+            .expect("genders");
+        let women = store
+            .stats_moneyball(&crate::stats_moneyball::StatsMoneyballRequest {
+                save_id: 1,
+                model: Some("core".to_owned()),
+                min_minutes: Some(300),
+                position_group: Some("ST".to_owned()),
+                genders: vec![1],
+                ..crate::stats_moneyball::StatsMoneyballRequest::default()
+            })
+            .expect("women");
+        assert_eq!(women.total, 1);
+        assert_eq!(women.rows[0].uid, 3);
+        assert_eq!(women.rows[0].peer_count, 1);
+        let men = store
+            .stats_moneyball(&crate::stats_moneyball::StatsMoneyballRequest {
+                save_id: 1,
+                model: Some("core".to_owned()),
+                min_minutes: Some(300),
+                position_group: Some("ST".to_owned()),
+                genders: vec![0],
+                ..crate::stats_moneyball::StatsMoneyballRequest::default()
+            })
+            .expect("men");
+        assert_eq!(men.total, 2);
+        assert!(men.rows.iter().all(|row| row.peer_count == 2));
+        assert_eq!(store.player_metrics_count(1, "core").expect("count"), 3);
 
         let similar = store
             .similar_stats_players(

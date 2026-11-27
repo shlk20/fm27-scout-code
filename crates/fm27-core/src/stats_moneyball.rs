@@ -99,6 +99,10 @@ pub struct StatsMoneyballRequest {
     pub include_goalkeepers: bool,
     pub position_group: Option<String>,
     pub league: Option<String>,
+    /// Player genders to score and keep (`0` men, `1` women). Empty keeps
+    /// everyone. Men and women are separate pools in FM, so a gender filter
+    /// scores only that pool instead of ranking against the other one.
+    pub genders: Vec<u8>,
     pub age_min: Option<i32>,
     pub age_max: Option<i32>,
     pub ca_min: Option<u16>,
